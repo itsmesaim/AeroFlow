@@ -20,11 +20,18 @@ app.use(cors());
 // Serve static files
 app.use(express.static(path.join(__dirname, "../public")));
 
+// Routes
+app.use("/api/auth", require("./routes/auth"));
+
 // Test route
 app.get("/api", (req, res) => {
   res.json({
     message: "Airport Management System API",
-    models: ["User", "Flight", "Passenger", "Booking"],
+    endpoints: {
+      register: "POST /api/auth/register",
+      login: "POST /api/auth/login",
+      getMe: "GET /api/auth/me (Protected)",
+    },
   });
 });
 
