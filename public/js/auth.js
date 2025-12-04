@@ -3,6 +3,7 @@ $(document).ready(function () {
   if (isLoggedIn()) {
     const user = getUser();
     redirectToDashboard(user.role);
+    return; // Stop here if already logged in
   }
 
   // Register Form Submit
@@ -143,7 +144,10 @@ function redirectToDashboard(role) {
     case "staff":
       window.location.href = "/pages/staff/checkin.html";
       break;
-    default:
+    case "passenger":
       window.location.href = "/pages/public/flight-board.html";
+      break;
+    default:
+      window.location.href = "/";
   }
 }

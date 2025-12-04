@@ -22,15 +22,26 @@ app.use(express.static(path.join(__dirname, "../public")));
 
 // Routes
 app.use("/api/auth", require("./routes/auth"));
+app.use("/api/flights", require("./routes/flights"));
 
 // Test route
 app.get("/api", (req, res) => {
   res.json({
     message: "Airport Management System API",
     endpoints: {
-      register: "POST /api/auth/register",
-      login: "POST /api/auth/login",
-      getMe: "GET /api/auth/me (Protected)",
+      auth: {
+        register: "POST /api/auth/register",
+        login: "POST /api/auth/login",
+        getMe: "GET /api/auth/me (Protected)",
+      },
+      flights: {
+        getAll: "GET /api/flights",
+        getOne: "GET /api/flights/:id",
+        create: "POST /api/flights (Admin)",
+        update: "PUT /api/flights/:id (Admin)",
+        delete: "DELETE /api/flights/:id (Admin)",
+        updateStatus: "PATCH /api/flights/:id/status (Admin/Agent)",
+      },
     },
   });
 });

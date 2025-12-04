@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Dashboard - Airport Management</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/css/style.css" />
+  </head>
+  <body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+      <div class="container-fluid">
+        <a class="navbar-brand" href="#">Airport Management</a>
+        <button
+          class="navbar-toggler"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#navbarNav"
+        >
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+          <ul class="navbar-nav ms-auto">
+            <li class="nav-item">
+              <span class="navbar-text text-white me-3" id="userInfo"></span>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="#" onclick="logout()">Logout</a>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+      <div class="row">
+        <!-- Sidebar -->
+        <div class="col-md-2">
+          <div class="list-group">
+            <a
+              href="/pages/admin/dashboard.html"
+              class="list-group-item list-group-item-action active"
+              >Dashboard</a
+            >
+            <a
+              href="/pages/admin/flights.html"
+              class="list-group-item list-group-item-action"
+              >Flights</a
+            >
+            <a
+              href="/pages/admin/analytics.html"
+              class="list-group-item list-group-item-action"
+              >Analytics</a
+            >
+          </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-md-10">
+          <h2>Admin Dashboard</h2>
+          <p class="text-muted">Welcome back, <span id="adminName"></span></p>
+
+          <div class="row mt-4">
+            <div class="col-md-3">
+              <div class="card text-white bg-primary">
+                <div class="card-body">
+                  <h5 class="card-title">Total Flights</h5>
+                  <h2 id="totalFlights">0</h2>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="card text-white bg-success">
+                <div class="card-body">
+                  <h5 class="card-title">Scheduled</h5>
+                  <h2 id="scheduledFlights">0</h2>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="card text-white bg-warning">
+                <div class="card-body">
+                  <h5 class="card-title">Boarding</h5>
+                  <h2 id="boardingFlights">0</h2>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="card text-white bg-danger">
+                <div class="card-body">
+                  <h5 class="card-title">Delayed</h5>
+                  <h2 id="delayedFlights">0</h2>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-5">
+            <h4>Quick Actions</h4>
+            <a href="/pages/admin/flights.html" class="btn btn-primary"
+              >Manage Flights</a
+            >
+            <a href="/pages/public/flight-board.html" class="btn btn-secondary"
+              >View Flight Board</a
+            >
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/config.js"></script>
+    <script src="/js/dashboard.js"></script>
+  </body>
+</html>
