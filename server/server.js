@@ -1,8 +1,8 @@
-const express = require('express');
-const dotenv = require('dotenv');
-const cors = require('cors');
-const path = require('path');
-const connectDB = require('./config/db');
+const express = require("express");
+const dotenv = require("dotenv");
+const cors = require("cors");
+const path = require("path");
+const connectDB = require("./config/db");
 
 // Load env vars
 dotenv.config();
@@ -18,16 +18,19 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 
 // Serve static files
-app.use(express.static(path.join(__dirname, '../public')));
+app.use(express.static(path.join(__dirname, "../public")));
 
-// Basic route
-app.get('/api', (req, res) => {
-    res.json({ message: 'Airport Management System API' });
+// Test route
+app.get("/api", (req, res) => {
+  res.json({
+    message: "Airport Management System API",
+    models: ["User", "Flight", "Passenger", "Booking"],
+  });
 });
 
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
-    console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
-    console.log(`Visit: http://localhost:${PORT}`);
+  console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
+  console.log(`Visit: http://localhost:${PORT}`);
 });
