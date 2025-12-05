@@ -23,6 +23,7 @@ app.use(express.static(path.join(__dirname, "../public")));
 // Routes
 app.use("/api/auth", require("./routes/auth"));
 app.use("/api/flights", require("./routes/flights"));
+app.use("/api/passengers", require("./routes/passengers"));
 
 // Test route
 app.get("/api", (req, res) => {
