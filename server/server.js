@@ -5,12 +5,17 @@ const http = require("http");
 const { Server } = require("socket.io");
 const path = require("path");
 const connectDB = require("./config/db");
+const jwt = require("jsonwebtoken");
 
 // Load env vars
 dotenv.config();
 
 // Connect to database
 connectDB();
+
+const Booking = require("./models/Booking");
+const Flight = require("./models/Flight");
+const { protect } = require("./middleware/auth");
 
 const app = express();
 
@@ -32,6 +37,24 @@ app.use(cors());
 
 // Serve static files
 app.use(express.static(path.join(__dirname, "../public")));
+
+// AUTHENTICATION MIDDLEWARE
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
+
+  if (!token) {
+    return res.status(401).json({ message: "No token provided" });
+  }
+
+  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+    if (err) {
+      return res.status(403).json({ message: "Invalid or expired token" });
+    }
+    req.user = user;
+    next();
+  });
+};
 
 // Socket.io connection
 io.on("connection", (socket) => {
@@ -113,6 +136,131 @@ app.get("/api", (req, res) => {
       },
     },
   });
+});
+
+// ANALYTICS ENDPOINT
+app.get("/api/analytics", protect, async (req, res) => {
+  try {
+    if (req.user.role !== "admin") {
+      return res.status(403).json({ message: "Admin only" });
+    }
+
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    // KPIs
+    const totalBookings = await Booking.countDocuments();
+
+    // FIX: Calculate revenue based on booking class
+    const bookingsWithFlights = await Booking.find({
+      status: { $ne: "cancelled" },
+    }).populate("flightId");
+
+    const totalRevenue = bookingsWithFlights.reduce((sum, booking) => {
+      if (!booking.flightId || !booking.flightId.price) return sum;
+
+      // Check booking class (economy or business)
+      const bookingClass = booking.class || "economy";
+      const price = booking.flightId.price[bookingClass] || 0;
+
+      return sum + price;
+    }, 0);
+
+    const bookingsToday = await Booking.countDocuments({
+      createdAt: { $gte: today, $lt: tomorrow },
+    });
+
+    const flightsToday = await Flight.countDocuments({
+      departureTime: { $gte: today, $lt: tomorrow },
+    });
+
+    // CHARTS
+    const statusDistribution = await Flight.aggregate([
+      { $group: { _id: "$status", count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+    ]);
+
+    const bookingsByDay = await Booking.aggregate([
+      { $match: { createdAt: { $gte: thirtyDaysAgo } } },
+      {
+        $group: {
+          _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { _id: 1 } },
+    ]);
+
+    // FIX: Revenue by day with class-based pricing
+    const revenueByDay = await Booking.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: thirtyDaysAgo },
+          status: { $ne: "cancelled" },
+        },
+      },
+      {
+        $lookup: {
+          from: "flights",
+          localField: "flightId",
+          foreignField: "_id",
+          as: "flight",
+        },
+      },
+      { $unwind: { path: "$flight", preserveNullAndEmptyArrays: true } },
+      {
+        $addFields: {
+          bookingPrice: {
+            $cond: {
+              if: { $eq: ["$class", "business"] },
+              then: { $ifNull: ["$flight.price.business", 0] },
+              else: { $ifNull: ["$flight.price.economy", 0] },
+            },
+          },
+        },
+      },
+      {
+        $group: {
+          _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+          revenue: { $sum: "$bookingPrice" },
+        },
+      },
+      { $sort: { _id: 1 } },
+    ]);
+
+    const topRoutes = await Flight.aggregate([
+      {
+        $group: {
+          _id: { origin: "$origin", destination: "$destination" },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { count: -1 } },
+      { $limit: 5 },
+    ]);
+
+    res.json({
+      kpis: {
+        totalBookings,
+        totalRevenue: Math.round(totalRevenue * 100) / 100,
+        bookingsToday,
+        flightsToday,
+      },
+      charts: {
+        statusDistribution,
+        bookingsByDay,
+        revenueByDay,
+        topRoutes,
+      },
+    });
+  } catch (error) {
+    console.error("Analytics error:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
 });
 
 const PORT = process.env.PORT || 5000;

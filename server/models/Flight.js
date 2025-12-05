@@ -47,24 +47,14 @@ const flightSchema = new mongoose.Schema({
     trim: true,
   },
   capacity: {
-    economy: {
-      type: Number,
-      default: 150,
-    },
-    business: {
-      type: Number,
-      default: 20,
-    },
+    economy: { type: Number, default: 150 },
+    business: { type: Number, default: 20 },
+    first: { type: Number, default: 8 },
   },
   price: {
-    economy: {
-      type: Number,
-      required: true,
-    },
-    business: {
-      type: Number,
-      required: true,
-    },
+    economy: { type: Number, required: true },
+    business: { type: Number, required: true },
+    first: { type: Number, required: true },
   },
   createdAt: {
     type: Date,
