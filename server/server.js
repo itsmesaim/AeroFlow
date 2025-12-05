@@ -25,6 +25,7 @@ app.use("/api/auth", require("./routes/auth"));
 app.use("/api/flights", require("./routes/flights"));
 app.use("/api/passengers", require("./routes/passengers"));
 app.use("/api/bookings", require("./routes/bookings"));
+app.use("/api/boarding", require("./routes/boarding"));
 
 // Test route
 app.get("/api", (req, res) => {
@@ -42,28 +43,33 @@ app.get("/api", (req, res) => {
         create: "POST /api/flights (Admin)",
         update: "PUT /api/flights/:id (Admin)",
         delete: "DELETE /api/flights/:id (Admin)",
-        updateStatus: "PATCH /api/flights/:id/status (Admin/Agent)",
       },
       passengers: {
         getAll: "GET /api/passengers (Admin/Agent/Staff)",
-        getOne: "GET /api/passengers/:id (Admin/Agent/Staff)",
-        create: "POST /api/passengers (Admin/Agent/Staff)",
-        update: "PUT /api/passengers/:id (Admin/Agent/Staff)",
+        getOne: "GET /api/passengers/:id",
+        create: "POST /api/passengers",
+        update: "PUT /api/passengers/:id",
         delete: "DELETE /api/passengers/:id (Admin)",
-        searchByPassport:
-          "GET /api/passengers/search/passport/:passportNumber (Admin/Agent/Staff)",
+        searchByPassport: "GET /api/passengers/search/passport/:passportNumber",
       },
       bookings: {
-        // ADD THIS SECTION
         getAll: "GET /api/bookings (Admin/Agent/Staff)",
-        getOne: "GET /api/bookings/:id (Admin/Agent/Staff)",
-        getByReference:
-          "GET /api/bookings/reference/:reference (Admin/Agent/Staff)",
-        create: "POST /api/bookings (Admin/Agent/Staff)",
-        update: "PUT /api/bookings/:id (Admin/Agent/Staff)",
-        delete: "DELETE /api/bookings/:id (Admin/Agent)",
+        getOne: "GET /api/bookings/:id",
+        getByReference: "GET /api/bookings/reference/:reference",
+        create: "POST /api/bookings",
+        update: "PUT /api/bookings/:id",
+        delete: "DELETE /api/bookings/:id",
         checkIn: "PUT /api/bookings/:id/checkin (Admin/Agent/Staff)",
         board: "PUT /api/bookings/:id/board (Admin/Agent)",
+      },
+      boarding: {
+        getQueue: "GET /api/boarding/flight/:flightId (Admin/Agent)",
+        getStats: "GET /api/boarding/flight/:flightId/stats (Admin/Agent)",
+        addToQueue: "POST /api/boarding/queue (Admin/Agent/Staff)",
+        callPassenger: "PUT /api/boarding/:id/call (Admin/Agent)",
+        markBoarding: "PUT /api/boarding/:id/boarding (Admin/Agent)",
+        markBoarded: "PUT /api/boarding/:id/boarded (Admin/Agent)",
+        removeFromQueue: "DELETE /api/boarding/:id (Admin/Agent)",
       },
     },
   });
