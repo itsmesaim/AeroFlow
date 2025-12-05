@@ -250,15 +250,31 @@ exports.getBoardingStats = async (req, res) => {
   try {
     const flightId = req.params.flightId;
 
-    const stats = await BoardingQueue.aggregate([
-      { $match: { flightId: mongoose.Types.ObjectId(flightId) } },
-      {
-        $group: {
-          _id: "$status",
-          count: { $sum: 1 },
-        },
-      },
-    ]);
+    // Count by status
+    const waiting = await BoardingQueue.countDocuments({
+      flightId: flightId,
+      status: "waiting",
+    });
+
+    const called = await BoardingQueue.countDocuments({
+      flightId: flightId,
+      status: "called",
+    });
+
+    const boarding = await BoardingQueue.countDocuments({
+      flightId: flightId,
+      status: "boarding",
+    });
+
+    const boarded = await BoardingQueue.countDocuments({
+      flightId: flightId,
+      status: "boarded",
+    });
+
+    const missed = await BoardingQueue.countDocuments({
+      flightId: flightId,
+      status: "missed",
+    });
 
     const totalBookings = await Booking.countDocuments({
       flightId,
@@ -267,16 +283,12 @@ exports.getBoardingStats = async (req, res) => {
 
     const result = {
       total: totalBookings,
-      waiting: 0,
-      called: 0,
-      boarding: 0,
-      boarded: 0,
-      missed: 0,
+      waiting: waiting,
+      called: called,
+      boarding: boarding,
+      boarded: boarded,
+      missed: missed,
     };
-
-    stats.forEach((stat) => {
-      result[stat._id] = stat.count;
-    });
 
     res.status(200).json({
       success: true,
