@@ -3,117 +3,494 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Admin Dashboard - Airport Management</title>
+    <title>Admin Dashboard - AeroFlow</title>
+
+    <!-- Bootstrap CSS -->
     <link
       href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/css/style.css" />
+    <!-- Font Awesome -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+      }
+
+      /* Navbar Styling */
+      .navbar {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+        padding: 15px 0;
+      }
+
+      .navbar-brand {
+        font-size: 24px;
+        font-weight: 700;
+        color: #667eea;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .navbar-brand i {
+        font-size: 28px;
+      }
+
+      .user-info {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+      }
+
+      .user-name {
+        font-weight: 600;
+        color: #2d3748;
+      }
+
+      .user-role {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 5px 15px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+      }
+
+      .btn-logout {
+        background: #ef4444;
+        color: white;
+        border: none;
+        padding: 8px 20px;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s;
+      }
+
+      .btn-logout:hover {
+        background: #dc2626;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+      }
+
+      /* Main Container */
+      .dashboard-container {
+        max-width: 1400px;
+        margin: 30px auto;
+        padding: 0 20px;
+      }
+
+      /* Sidebar */
+      .sidebar {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border-radius: 15px;
+        padding: 20px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        position: sticky;
+        top: 100px;
+      }
+
+      .sidebar h5 {
+        color: #667eea;
+        font-weight: 700;
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 2px solid #e2e8f0;
+      }
+
+      .nav-link {
+        color: #4a5568;
+        padding: 12px 15px;
+        border-radius: 8px;
+        margin-bottom: 8px;
+        font-weight: 500;
+        transition: all 0.3s;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .nav-link i {
+        font-size: 18px;
+        width: 25px;
+      }
+
+      .nav-link:hover {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        transform: translateX(5px);
+      }
+
+      .nav-link.active {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+      }
+
+      /* Main Content */
+      .main-content {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border-radius: 15px;
+        padding: 30px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      }
+
+      .page-title {
+        font-size: 32px;
+        font-weight: 700;
+        color: #2d3748;
+        margin-bottom: 10px;
+      }
+
+      .page-subtitle {
+        color: #718096;
+        margin-bottom: 30px;
+      }
+
+      /* Statistics Cards */
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+      }
+
+      .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 25px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        border-left: 4px solid;
+        transition: all 0.3s;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .stat-card::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 100px;
+        height: 100px;
+        opacity: 0.1;
+        border-radius: 50%;
+        transform: translate(30%, -30%);
+      }
+
+      .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+      }
+
+      .stat-card.primary {
+        border-left-color: #3b82f6;
+      }
+
+      .stat-card.primary::before {
+        background: #3b82f6;
+      }
+
+      .stat-card.success {
+        border-left-color: #10b981;
+      }
+
+      .stat-card.success::before {
+        background: #10b981;
+      }
+
+      .stat-card.warning {
+        border-left-color: #f59e0b;
+      }
+
+      .stat-card.warning::before {
+        background: #f59e0b;
+      }
+
+      .stat-card.danger {
+        border-left-color: #ef4444;
+      }
+
+      .stat-card.danger::before {
+        background: #ef4444;
+      }
+
+      .stat-icon {
+        font-size: 40px;
+        margin-bottom: 15px;
+        opacity: 0.8;
+      }
+
+      .stat-card.primary .stat-icon {
+        color: #3b82f6;
+      }
+
+      .stat-card.success .stat-icon {
+        color: #10b981;
+      }
+
+      .stat-card.warning .stat-icon {
+        color: #f59e0b;
+      }
+
+      .stat-card.danger .stat-icon {
+        color: #ef4444;
+      }
+
+      .stat-label {
+        color: #718096;
+        font-size: 14px;
+        font-weight: 600;
+        text-transform: uppercase;
+        margin-bottom: 8px;
+      }
+
+      .stat-value {
+        font-size: 36px;
+        font-weight: 700;
+        color: #2d3748;
+        position: relative;
+        z-index: 1;
+      }
+
+      /* Quick Actions */
+      .quick-actions {
+        background: white;
+        border-radius: 12px;
+        padding: 25px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+      }
+
+      .quick-actions h4 {
+        color: #2d3748;
+        font-weight: 700;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .action-buttons {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+      }
+
+      .action-btn {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 15px 20px;
+        border-radius: 10px;
+        font-weight: 600;
+        transition: all 0.3s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+      }
+
+      .action-btn:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+      }
+
+      .action-btn i {
+        font-size: 20px;
+      }
+
+      /* Loading State */
+      .loading-state {
+        text-align: center;
+        padding: 40px;
+      }
+
+      .spinner-border {
+        width: 3rem;
+        height: 3rem;
+      }
+
+      /* Responsive */
+      @media (max-width: 768px) {
+        .stats-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .action-buttons {
+          grid-template-columns: 1fr;
+        }
+
+        .sidebar {
+          position: relative;
+          top: 0;
+          margin-bottom: 20px;
+        }
+      }
+    </style>
   </head>
   <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <!-- Navbar -->
+    <nav class="navbar sticky-top">
       <div class="container-fluid">
-        <a class="navbar-brand" href="#">Airport Management</a>
-        <button
-          class="navbar-toggler"
-          type="button"
-          data-bs-toggle="collapse"
-          data-bs-target="#navbarNav"
-        >
-          <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navbarNav">
-          <ul class="navbar-nav ms-auto">
-            <li class="nav-item">
-              <span class="navbar-text text-white me-3" id="userInfo"></span>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="#" onclick="logout()">Logout</a>
-            </li>
-          </ul>
+        <a class="navbar-brand" href="#">
+          <i class="fas fa-plane-departure"></i>
+          AeroFlow Admin
+        </a>
+        <div class="user-info">
+          <span class="user-name" id="userName">Loading...</span>
+          <span class="user-role">Admin</span>
+          <button class="btn btn-logout" onclick="logout()">
+            <i class="fas fa-sign-out-alt"></i> Logout
+          </button>
         </div>
       </div>
     </nav>
 
-    <div class="container-fluid mt-4">
+    <!-- Dashboard Container -->
+    <div class="dashboard-container">
       <div class="row">
         <!-- Sidebar -->
-        <div class="col-md-2">
-          <div class="list-group">
-            <a
-              href="/pages/admin/dashboard.html"
-              class="list-group-item list-group-item-action active"
-              >Dashboard</a
-            >
-            <a
-              href="/pages/admin/flights.html"
-              class="list-group-item list-group-item-action"
-              >Flights</a
-            >
-            <a
-              href="/pages/admin/analytics.html"
-              class="list-group-item list-group-item-action"
-              >Analytics</a
-            >
+        <div class="col-md-3">
+          <div class="sidebar">
+            <h5><i class="fas fa-bars"></i> Navigation</h5>
+            <nav class="nav flex-column">
+              <a class="nav-link active" href="dashboard.html">
+                <i class="fas fa-tachometer-alt"></i>
+                Dashboard
+              </a>
+              <a class="nav-link" href="flights.html">
+                <i class="fas fa-plane"></i>
+                Manage Flights
+              </a>
+              <a class="nav-link" href="gates.html">
+                <i class="fas fa-door-open"></i>
+                Gate Assignment
+              </a>
+              <a class="nav-link" href="#" onclick="alert('Coming soon!')">
+                <i class="fas fa-users"></i>
+                Passengers
+              </a>
+              <a class="nav-link" href="#" onclick="alert('Coming soon!')">
+                <i class="fas fa-ticket-alt"></i>
+                Bookings
+              </a>
+              <a class="nav-link" href="#" onclick="alert('Coming soon!')">
+                <i class="fas fa-chart-line"></i>
+                Analytics
+              </a>
+            </nav>
           </div>
         </div>
 
         <!-- Main Content -->
-        <div class="col-md-10">
-          <h2>Admin Dashboard</h2>
-          <p class="text-muted">Welcome back, <span id="adminName"></span></p>
+        <div class="col-md-9">
+          <div class="main-content">
+            <h1 class="page-title">Dashboard Overview</h1>
+            <p class="page-subtitle">
+              Welcome back! Here's what's happening with your flights today.
+            </p>
 
-          <div class="row mt-4">
-            <div class="col-md-3">
-              <div class="card text-white bg-primary">
-                <div class="card-body">
-                  <h5 class="card-title">Total Flights</h5>
-                  <h2 id="totalFlights">0</h2>
-                </div>
+            <!-- Loading State -->
+            <div id="loadingState" class="loading-state">
+              <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
               </div>
+              <p class="mt-3">Loading dashboard statistics...</p>
             </div>
-            <div class="col-md-3">
-              <div class="card text-white bg-success">
-                <div class="card-body">
-                  <h5 class="card-title">Scheduled</h5>
-                  <h2 id="scheduledFlights">0</h2>
-                </div>
-              </div>
-            </div>
-            <div class="col-md-3">
-              <div class="card text-white bg-warning">
-                <div class="card-body">
-                  <h5 class="card-title">Boarding</h5>
-                  <h2 id="boardingFlights">0</h2>
-                </div>
-              </div>
-            </div>
-            <div class="col-md-3">
-              <div class="card text-white bg-danger">
-                <div class="card-body">
-                  <h5 class="card-title">Delayed</h5>
-                  <h2 id="delayedFlights">0</h2>
-                </div>
-              </div>
-            </div>
-          </div>
 
-          <div class="mt-5">
-            <h4>Quick Actions</h4>
-            <a href="/pages/admin/flights.html" class="btn btn-primary"
-              >Manage Flights</a
+            <!-- Statistics Grid -->
+            <div id="statsGrid" class="stats-grid" style="display: none">
+              <div class="stat-card primary">
+                <i class="fas fa-plane stat-icon"></i>
+                <div class="stat-label">Total Flights</div>
+                <div class="stat-value" id="totalFlights">0</div>
+              </div>
+
+              <div class="stat-card success">
+                <i class="fas fa-clock stat-icon"></i>
+                <div class="stat-label">Scheduled</div>
+                <div class="stat-value" id="scheduledFlights">0</div>
+              </div>
+
+              <div class="stat-card warning">
+                <i class="fas fa-door-open stat-icon"></i>
+                <div class="stat-label">Boarding</div>
+                <div class="stat-value" id="boardingFlights">0</div>
+              </div>
+
+              <div class="stat-card danger">
+                <i class="fas fa-exclamation-triangle stat-icon"></i>
+                <div class="stat-label">Delayed</div>
+                <div class="stat-value" id="delayedFlights">0</div>
+              </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div
+              class="quick-actions mt-4"
+              id="quickActions"
+              style="display: none"
             >
-            <a href="/pages/public/flight-board.html" class="btn btn-secondary"
-              >View Flight Board</a
-            >
+              <h4><i class="fas fa-bolt"></i> Quick Actions</h4>
+              <div class="action-buttons">
+                <button
+                  class="action-btn"
+                  onclick="window.location.href='flights.html'"
+                >
+                  <i class="fas fa-plus-circle"></i>
+                  Add New Flight
+                </button>
+                <button
+                  class="action-btn"
+                  onclick="window.location.href='flights.html'"
+                >
+                  <i class="fas fa-list"></i>
+                  View All Flights
+                </button>
+
+                <button
+                  class="action-btn"
+                  onclick="window.location.href='gates.html'"
+                >
+                  <i class="fas fa-door-open"></i>
+                  Gate Assignment
+                </button>
+                <button class="action-btn" onclick="alert('Coming soon!')">
+                  <i class="fas fa-user-plus"></i>
+                  Add Passenger
+                </button>
+                <button class="action-btn" onclick="alert('Coming soon!')">
+                  <i class="fas fa-chart-bar"></i>
+                  View Reports
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/js/config.js"></script>
-    <script src="/js/dashboard.js"></script>
+
+    <script src="../../js/dashboard.js"></script>
   </body>
 </html>
