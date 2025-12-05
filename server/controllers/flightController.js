@@ -1,5 +1,17 @@
 const Flight = require("../models/Flight");
 
+// Helper function to emit socket events
+const emitFlightUpdate = (req, flight, eventType) => {
+  const io = req.app.get("io");
+  if (io) {
+    console.log(`Emitting flight update: ${eventType} for flight ${flight.flightNumber}`);
+    io.emit("flight-updated", {  // Changed from io.to(...).emit to io.emit
+      type: eventType,
+      flight: flight,
+    });
+  }
+};
+
 // @desc    Get all flights
 // @route   GET /api/flights
 // @access  Public
@@ -107,14 +119,23 @@ exports.createFlight = async (req, res) => {
 // @access  Private/Admin
 exports.updateFlight = async (req, res) => {
   try {
-    const flight = await Flight.findByIdAndUpdate(req.params.id, req.body, {
+    let flight = await Flight.findById(req.params.id);
+
+    if (!flight) {
+      return res.status(404).json({
+        success: false,
+        error: "Flight not found",
+      });
+    }
+
+    // Update flight
+    flight = await Flight.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
       runValidators: true,
     });
 
-    if (!flight) {
-      return res.status(404).json({ message: "Flight not found" });
-    }
+    // Emit socket event for real-time update
+    emitFlightUpdate(req, flight, "update");
 
     res.status(200).json({
       success: true,
@@ -122,7 +143,20 @@ exports.updateFlight = async (req, res) => {
       flight,
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("Error updating flight:", error);
+
+    if (error.name === "ValidationError") {
+      const messages = Object.values(error.errors).map((err) => err.message);
+      return res.status(400).json({
+        success: false,
+        error: messages.join(", "),
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      error: "Server error",
+    });
   }
 };
 

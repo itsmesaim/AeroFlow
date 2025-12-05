@@ -2,6 +2,17 @@ const BoardingQueue = require("../models/BoardingQueue");
 const Booking = require("../models/Booking");
 const Flight = require("../models/Flight");
 
+// Helper function to emit socket events
+const emitBoardingUpdate = (req, queueEntry, eventType) => {
+  const io = req.app.get("io");
+  if (io) {
+    io.to(`boarding-${queueEntry.flightId}`).emit("boarding-updated", {
+      type: eventType,
+      queueEntry: queueEntry,
+    });
+  }
+};
+
 // @desc    Get boarding queue for a flight
 // @route   GET /api/boarding/flight/:flightId
 // @access  Private (Admin, Agent)
@@ -136,6 +147,9 @@ exports.callPassenger = async (req, res) => {
     await queueEntry.populate("bookingId", "bookingReference seatNumber class");
     await queueEntry.populate("passengerId", "name passportNumber");
 
+    // Emit socket event for real-time update
+    emitBoardingUpdate(req, queueEntry, "passenger-called");
+
     res.status(200).json({
       success: true,
       message: "Passenger called for boarding",
@@ -211,6 +225,9 @@ exports.markBoarded = async (req, res) => {
 
     await queueEntry.populate("bookingId", "bookingReference seatNumber class");
     await queueEntry.populate("passengerId", "name passportNumber");
+
+    // Emit socket event for real-time update
+    emitBoardingUpdate(req, queueEntry, "passenger-boarded");
 
     res.status(200).json({
       success: true,

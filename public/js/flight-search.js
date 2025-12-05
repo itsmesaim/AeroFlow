@@ -10,7 +10,49 @@ $(document).ready(function () {
     e.preventDefault();
     searchFlights();
   });
+
+  // Initialize socket for real-time updates
+  initializeSocketUpdates();
 });
+
+// Initialize socket and listen for flight updates
+function initializeSocketUpdates() {
+  // Check if socket functions exist
+  if (typeof initSocket !== "function") {
+    console.log("Socket.io not loaded");
+    return;
+  }
+
+  // Initialize socket connection
+  initSocket();
+
+  // Listen for flight updates
+  onFlightUpdate(function (data) {
+    console.log("Flight updated via socket:", data);
+
+    if (data.type === "update") {
+      showToast(
+        "Flight " + data.flight.flightNumber + " has been updated!",
+        "info"
+      );
+
+      // Reload flights to show updated data
+      loadAllFlights();
+    }
+  });
+}
+
+// Show toast notification
+function showToast(message, type) {
+  const bgColor = type === "info" ? "#3b82f6" : "#10b981";
+  const toast = $(`
+        <div style="position: fixed; top: 80px; right: 20px; z-index: 9999; background: ${bgColor}; color: white; padding: 15px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); animation: slideIn 0.3s ease;">
+            <i class="fas fa-info-circle"></i> ${message}
+        </div>
+    `);
+  $("body").append(toast);
+  setTimeout(() => toast.fadeOut(() => toast.remove()), 4000);
+}
 
 // Load all available flights
 function loadAllFlights() {

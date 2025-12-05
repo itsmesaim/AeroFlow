@@ -152,7 +152,7 @@ function redirectToDashboard(role) {
       window.location.href = "/pages/staff/checkin.html";
       break;
     case "passenger":
-      window.location.href = "/pages/public/flight-board.html";
+      window.location.href = "/pages/public/flight-search.html";
       break;
     default:
       window.location.href = "/";
