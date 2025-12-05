@@ -12,23 +12,18 @@ const router = express.Router();
 
 const { protect, authorize } = require("../middleware/auth");
 
-// All routes are protected
+// Public routes - allow passengers to create and search
+router.post("/", createPassenger);
+router.get("/search/passport/:passportNumber", searchByPassport);
+
+// Public routes for passengers to manage their info
+router.route("/:id").get(getPassenger).put(updatePassenger);
+
+// Protected routes (admin/staff only)
 router.use(protect);
 
-// Routes accessible by admin, agent, and staff
-router
-  .route("/")
-  .get(authorize("admin", "agent", "staff"), getPassengers)
-  .post(authorize("admin", "agent", "staff"), createPassenger);
+router.route("/").get(authorize("admin", "agent", "staff"), getPassengers);
 
-router
-  .route("/search/passport/:passportNumber")
-  .get(authorize("admin", "agent", "staff"), searchByPassport);
-
-router
-  .route("/:id")
-  .get(authorize("admin", "agent", "staff"), getPassenger)
-  .put(authorize("admin", "agent", "staff"), updatePassenger)
-  .delete(authorize("admin"), deletePassenger);
+router.route("/:id").delete(authorize("admin"), deletePassenger);
 
 module.exports = router;

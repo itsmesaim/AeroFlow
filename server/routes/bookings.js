@@ -14,24 +14,17 @@ const router = express.Router();
 
 const { protect, authorize } = require("../middleware/auth");
 
-// All routes are protected
+// Public routes - allow anyone to create booking and search by reference
+router.post("/", createBooking);
+router.get("/reference/:reference", getBookingByReference);
+
+// Public routes for passengers to manage their bookings
+router.route("/:id").get(getBooking).put(updateBooking).delete(deleteBooking);
+
+// Protected routes (admin/staff only)
 router.use(protect);
 
-// Routes accessible by admin, agent, and staff
-router
-  .route("/")
-  .get(authorize("admin", "agent", "staff"), getBookings)
-  .post(authorize("admin", "agent", "staff"), createBooking);
-
-router
-  .route("/reference/:reference")
-  .get(authorize("admin", "agent", "staff"), getBookingByReference);
-
-router
-  .route("/:id")
-  .get(authorize("admin", "agent", "staff"), getBooking)
-  .put(authorize("admin", "agent", "staff"), updateBooking)
-  .delete(authorize("admin", "agent"), deleteBooking);
+router.route("/").get(authorize("admin", "agent", "staff"), getBookings);
 
 router
   .route("/:id/checkin")

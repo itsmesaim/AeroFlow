@@ -84,7 +84,14 @@ $(document).ready(function () {
 
           // Redirect after 1 second
           setTimeout(() => {
-            redirectToDashboard(response.user.role);
+            // Check if user was trying to book
+            const intendedPage = localStorage.getItem("intendedPage");
+            if (intendedPage === "booking") {
+              localStorage.removeItem("intendedPage");
+              window.location.href = "../public/booking.html";
+            } else {
+              redirectToDashboard(response.user.role);
+            }
           }, 1000);
         }
       },
