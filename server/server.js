@@ -24,6 +24,7 @@ app.use(express.static(path.join(__dirname, "../public")));
 app.use("/api/auth", require("./routes/auth"));
 app.use("/api/flights", require("./routes/flights"));
 app.use("/api/passengers", require("./routes/passengers"));
+app.use("/api/bookings", require("./routes/bookings"));
 
 // Test route
 app.get("/api", (req, res) => {
@@ -42,6 +43,27 @@ app.get("/api", (req, res) => {
         update: "PUT /api/flights/:id (Admin)",
         delete: "DELETE /api/flights/:id (Admin)",
         updateStatus: "PATCH /api/flights/:id/status (Admin/Agent)",
+      },
+      passengers: {
+        getAll: "GET /api/passengers (Admin/Agent/Staff)",
+        getOne: "GET /api/passengers/:id (Admin/Agent/Staff)",
+        create: "POST /api/passengers (Admin/Agent/Staff)",
+        update: "PUT /api/passengers/:id (Admin/Agent/Staff)",
+        delete: "DELETE /api/passengers/:id (Admin)",
+        searchByPassport:
+          "GET /api/passengers/search/passport/:passportNumber (Admin/Agent/Staff)",
+      },
+      bookings: {
+        // ADD THIS SECTION
+        getAll: "GET /api/bookings (Admin/Agent/Staff)",
+        getOne: "GET /api/bookings/:id (Admin/Agent/Staff)",
+        getByReference:
+          "GET /api/bookings/reference/:reference (Admin/Agent/Staff)",
+        create: "POST /api/bookings (Admin/Agent/Staff)",
+        update: "PUT /api/bookings/:id (Admin/Agent/Staff)",
+        delete: "DELETE /api/bookings/:id (Admin/Agent)",
+        checkIn: "PUT /api/bookings/:id/checkin (Admin/Agent/Staff)",
+        board: "PUT /api/bookings/:id/board (Admin/Agent)",
       },
     },
   });
