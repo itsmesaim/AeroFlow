@@ -17,37 +17,107 @@
     />
 
     <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
       body {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          sans-serif;
+        background: #f0f4f8;
         min-height: 100vh;
-        padding: 20px 0;
       }
 
-      .main-container {
-        background: white;
-        border-radius: 15px;
-        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-        padding: 30px;
-        margin: 20px auto;
-        max-width: 1400px;
-      }
-
-      .page-header {
-        border-bottom: 3px solid #667eea;
-        padding-bottom: 20px;
+      /* Navbar */
+      .navbar {
+        background: #1e3a8a;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        padding: 15px 0;
         margin-bottom: 30px;
       }
 
-      .page-header h2 {
-        color: #667eea;
+      .navbar-brand {
+        color: white;
+        font-size: 28px;
         font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 10px;
       }
 
+      .navbar-brand:hover {
+        color: white;
+      }
+
+      .navbar-brand i {
+        font-size: 32px;
+      }
+
+      .btn-nav {
+        background: #3b82f6;
+        color: white;
+        border: none;
+        padding: 8px 20px;
+        border-radius: 6px;
+        font-weight: 600;
+        transition: all 0.3s;
+        margin: 0 5px;
+      }
+
+      .btn-nav:hover {
+        background: #2563eb;
+      }
+
+      .btn-logout {
+        background: #dc2626;
+        color: white;
+        border: none;
+        padding: 8px 20px;
+        border-radius: 6px;
+        font-weight: 600;
+      }
+
+      .btn-logout:hover {
+        background: #b91c1c;
+      }
+
+      /* Main Container */
+      .main-container {
+        max-width: 1600px;
+        margin: 0 auto;
+        padding: 0 20px;
+      }
+
+      /* Page Header */
+      .page-header {
+        background: white;
+        border-radius: 12px;
+        padding: 25px 30px;
+        margin-bottom: 30px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        border-left: 4px solid #1e3a8a;
+      }
+
+      .page-header h2 {
+        color: #1e3a8a;
+        font-weight: 700;
+        margin-bottom: 5px;
+      }
+
+      .page-header p {
+        color: #64748b;
+        margin: 0;
+      }
+
+      /* Controls Section */
       .controls-section {
-        background: #f8f9fa;
-        padding: 20px;
-        border-radius: 10px;
-        margin-bottom: 25px;
+        background: white;
+        border-radius: 12px;
+        padding: 25px;
+        margin-bottom: 30px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
       }
 
       .search-box {
@@ -55,7 +125,14 @@
       }
 
       .search-box input {
-        padding-left: 40px;
+        padding-left: 45px;
+        border: 2px solid #e2e8f0;
+        border-radius: 8px;
+      }
+
+      .search-box input:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
       }
 
       .search-box i {
@@ -63,33 +140,64 @@
         left: 15px;
         top: 50%;
         transform: translateY(-50%);
-        color: #6c757d;
+        color: #64748b;
+        font-size: 18px;
       }
 
       .filter-group {
         display: flex;
-        gap: 15px;
+        gap: 10px;
         align-items: center;
         flex-wrap: wrap;
       }
 
-      .btn-add-flight {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border: none;
-        padding: 10px 25px;
+      .filter-group label {
+        color: #475569;
         font-weight: 600;
       }
 
-      .btn-add-flight:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+      .filter-btn {
+        border: 2px solid #e2e8f0;
+        background: white;
+        color: #475569;
+        font-weight: 600;
+        transition: all 0.3s;
       }
 
+      .filter-btn:hover {
+        border-color: #3b82f6;
+        color: #3b82f6;
+        background: #eff6ff;
+      }
+
+      .filter-btn.active {
+        border-color: #3b82f6;
+        background: #3b82f6;
+        color: white;
+      }
+
+      .btn-add-flight {
+        background: #3b82f6;
+        border: none;
+        color: white;
+        padding: 12px 25px;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s;
+      }
+
+      .btn-add-flight:hover {
+        background: #2563eb;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+      }
+
+      /* Table Container */
       .table-container {
         background: white;
-        border-radius: 10px;
+        border-radius: 12px;
         overflow: hidden;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
       }
 
       .flights-table {
@@ -97,279 +205,331 @@
       }
 
       .flights-table thead {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: #1e3a8a;
         color: white;
       }
 
       .flights-table thead th {
         border: none;
-        padding: 15px;
+        padding: 18px 15px;
         font-weight: 600;
+        text-transform: uppercase;
+        font-size: 13px;
+        letter-spacing: 0.5px;
       }
 
       .flights-table tbody td {
-        padding: 15px;
+        padding: 18px 15px;
         vertical-align: middle;
+        border-bottom: 1px solid #f1f5f9;
       }
 
-      .flights-table tbody tr:hover {
-        background-color: #f8f9fa;
-      }
-
-      .status-badge {
-        padding: 5px 12px;
-        border-radius: 20px;
-        font-size: 0.85rem;
-        font-weight: 600;
-        text-transform: uppercase;
-      }
-
-      .status-scheduled {
-        background-color: #e3f2fd;
-        color: #1976d2;
-      }
-
-      .status-boarding {
-        background-color: #fff3e0;
-        color: #f57c00;
-      }
-
-      .status-departed {
-        background-color: #e8f5e9;
-        color: #388e3c;
-      }
-
-      .status-delayed {
-        background-color: #ffebee;
-        color: #d32f2f;
-      }
-
-      .status-cancelled {
-        background-color: #fce4ec;
-        color: #c2185b;
-      }
-
-      .action-btn {
-        padding: 5px 10px;
-        margin: 0 3px;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
+      .flights-table tbody tr {
         transition: all 0.3s;
       }
 
+      .flights-table tbody tr:hover {
+        background-color: #f8fafc;
+      }
+
+      /* Status Badges */
+      .status-badge {
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        display: inline-block;
+      }
+
+      .status-scheduled {
+        background-color: #dbeafe;
+        color: #1e40af;
+      }
+
+      .status-boarding {
+        background-color: #fed7aa;
+        color: #c2410c;
+      }
+
+      .status-departed {
+        background-color: #d1fae5;
+        color: #065f46;
+      }
+
+      .status-delayed {
+        background-color: #fecaca;
+        color: #991b1b;
+      }
+
+      .status-cancelled {
+        background-color: #fce7f3;
+        color: #9f1239;
+      }
+
+      /* Action Buttons */
+      .action-btn {
+        padding: 6px 12px;
+        margin: 0 3px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.3s;
+        font-size: 13px;
+        font-weight: 600;
+      }
+
       .btn-edit {
-        background-color: #4caf50;
+        background-color: #10b981;
         color: white;
       }
 
       .btn-edit:hover {
-        background-color: #45a049;
+        background-color: #059669;
       }
 
       .btn-delete {
-        background-color: #f44336;
+        background-color: #ef4444;
         color: white;
       }
 
       .btn-delete:hover {
-        background-color: #da190b;
+        background-color: #dc2626;
       }
 
       .btn-status {
-        background-color: #2196f3;
+        background-color: #3b82f6;
         color: white;
       }
 
       .btn-status:hover {
-        background-color: #0b7dda;
+        background-color: #2563eb;
       }
 
+      /* Loading & No Results */
       .loading-spinner {
         text-align: center;
-        padding: 40px;
+        padding: 60px;
+      }
+
+      .spinner-border {
+        width: 3rem;
+        height: 3rem;
+        color: #3b82f6;
       }
 
       .no-results {
         text-align: center;
-        padding: 40px;
-        color: #6c757d;
+        padding: 60px;
+        color: #64748b;
       }
 
+      .no-results i {
+        font-size: 64px;
+        color: #cbd5e1;
+        margin-bottom: 20px;
+      }
+
+      /* Pagination */
       .pagination-container {
         display: flex;
         justify-content: center;
         align-items: center;
-        margin-top: 20px;
-        gap: 15px;
+        margin-top: 25px;
+        gap: 20px;
       }
 
-      .modal-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      .pagination-container button {
+        background: white;
+        color: #475569;
+        border: 2px solid #e2e8f0;
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s;
+      }
+
+      .pagination-container button:not(:disabled):hover {
+        background: #3b82f6;
         color: white;
+        border-color: #3b82f6;
+      }
+
+      .pagination-container button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      /* Modal Styling */
+      .modal-header {
+        background: #1e3a8a;
+        color: white;
+      }
+
+      .modal-header .btn-close {
+        filter: brightness(0) invert(1);
       }
 
       .form-label {
         font-weight: 600;
-        color: #495057;
+        color: #475569;
+        margin-bottom: 8px;
       }
 
-      .logout-btn {
-        background-color: #dc3545;
+      .form-control,
+      .form-select {
+        border: 2px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 10px;
+      }
+
+      .form-control:focus,
+      .form-select:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+      }
+
+      .modal-footer .btn-primary {
+        background: #3b82f6;
         border: none;
-        padding: 8px 20px;
       }
 
-      .logout-btn:hover {
-        background-color: #c82333;
+      .modal-footer .btn-primary:hover {
+        background: #2563eb;
       }
     </style>
   </head>
   <body>
-    <div class="container">
-      <div class="main-container">
-        <!-- Header -->
-        <div
-          class="page-header d-flex justify-content-between align-items-center"
-        >
-          <div>
-            <h2><i class="fas fa-plane"></i> Flight Management</h2>
-            <p class="text-muted mb-0">Manage all flight operations</p>
+    <!-- Navbar -->
+    <nav class="navbar">
+      <div class="container-fluid">
+        <a class="navbar-brand" href="#">
+          <i class="fas fa-plane"></i>
+          Flight Management
+        </a>
+        <div class="d-flex gap-2">
+          <button
+            class="btn btn-nav"
+            onclick="window.location.href='dashboard.html'"
+          >
+            <i class="fas fa-tachometer-alt"></i> Dashboard
+          </button>
+          <button
+            class="btn btn-nav"
+            onclick="window.location.href='gates.html'"
+          >
+            <i class="fas fa-door-open"></i> Gates
+          </button>
+          <button class="btn btn-logout" onclick="logout()">
+            <i class="fas fa-sign-out-alt"></i> Logout
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <div class="main-container">
+      <!-- Page Header -->
+      <div class="page-header">
+        <h2><i class="fas fa-plane"></i> Flight Management</h2>
+        <p>Manage all flight operations and schedules</p>
+      </div>
+
+      <!-- Controls Section -->
+      <div class="controls-section">
+        <div class="row mb-3">
+          <div class="col-md-6">
+            <!-- Live Search -->
+            <div class="search-box">
+              <i class="fas fa-search"></i>
+              <input
+                type="text"
+                id="searchInput"
+                class="form-control"
+                placeholder="Search by flight number or destination..."
+              />
+            </div>
           </div>
-          <div class="d-flex gap-2">
+          <div class="col-md-6 text-end">
             <button
-              class="btn btn-secondary"
-              onclick="window.location.href='dashboard.html'"
+              class="btn btn-primary btn-add-flight"
+              data-bs-toggle="modal"
+              data-bs-target="#addFlightModal"
             >
-              <i class="fas fa-arrow-left"></i> Back to Dashboard
-            </button>
-            <button
-              class="btn btn-secondary"
-              onclick="window.location.href='gates.html'"
-            >
-              <i class="fas fa-door-open"></i> Gates
-            </button>
-            <button class="btn btn-danger logout-btn" onclick="logout()">
-              <i class="fas fa-sign-out-alt"></i> Logout
+              <i class="fas fa-plus"></i> Add New Flight
             </button>
           </div>
         </div>
 
-        <!-- Controls Section -->
-        <div class="controls-section">
-          <div class="row mb-3">
-            <div class="col-md-6">
-              <!-- Live Search -->
-              <div class="search-box">
-                <i class="fas fa-search"></i>
-                <input
-                  type="text"
-                  id="searchInput"
-                  class="form-control"
-                  placeholder="Search by flight number or destination..."
-                />
-              </div>
-            </div>
-            <div class="col-md-6 text-end">
-              <button
-                class="btn btn-primary btn-add-flight"
-                data-bs-toggle="modal"
-                data-bs-target="#addFlightModal"
-              >
-                <i class="fas fa-plus"></i> Add New Flight
+        <div class="row">
+          <div class="col-md-12">
+            <div class="filter-group">
+              <label class="fw-bold">Filter by Status:</label>
+              <button class="btn btn-sm filter-btn active" data-status="all">
+                All
+              </button>
+              <button class="btn btn-sm filter-btn" data-status="scheduled">
+                Scheduled
+              </button>
+              <button class="btn btn-sm filter-btn" data-status="boarding">
+                Boarding
+              </button>
+              <button class="btn btn-sm filter-btn" data-status="departed">
+                Departed
+              </button>
+              <button class="btn btn-sm filter-btn" data-status="delayed">
+                Delayed
+              </button>
+              <button class="btn btn-sm filter-btn" data-status="cancelled">
+                Cancelled
               </button>
             </div>
           </div>
-
-          <div class="row">
-            <div class="col-md-12">
-              <div class="filter-group">
-                <label class="fw-bold">Filter by Status:</label>
-                <button
-                  class="btn btn-sm btn-outline-primary filter-btn active"
-                  data-status="all"
-                >
-                  All
-                </button>
-                <button
-                  class="btn btn-sm btn-outline-info filter-btn"
-                  data-status="scheduled"
-                >
-                  Scheduled
-                </button>
-                <button
-                  class="btn btn-sm btn-outline-warning filter-btn"
-                  data-status="boarding"
-                >
-                  Boarding
-                </button>
-                <button
-                  class="btn btn-sm btn-outline-success filter-btn"
-                  data-status="departed"
-                >
-                  Departed
-                </button>
-                <button
-                  class="btn btn-sm btn-outline-danger filter-btn"
-                  data-status="delayed"
-                >
-                  Delayed
-                </button>
-                <button
-                  class="btn btn-sm btn-outline-secondary filter-btn"
-                  data-status="cancelled"
-                >
-                  Cancelled
-                </button>
-              </div>
-            </div>
-          </div>
         </div>
+      </div>
 
-        <!-- Flights Table -->
-        <div class="table-container">
-          <div class="table-responsive">
-            <table class="table flights-table">
-              <thead>
-                <tr>
-                  <th>Flight Number</th>
-                  <th>Origin</th>
-                  <th>Destination</th>
-                  <th>Departure</th>
-                  <th>Arrival</th>
-                  <th>Gate</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody id="flightsTableBody">
-                <!-- Flights will be loaded here via AJAX -->
-                <tr>
-                  <td colspan="8" class="loading-spinner">
-                    <div class="spinner-border text-primary" role="status">
-                      <span class="visually-hidden">Loading...</span>
-                    </div>
-                    <p class="mt-2">Loading flights...</p>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+      <!-- Flights Table -->
+      <div class="table-container">
+        <div class="table-responsive">
+          <table class="table flights-table">
+            <thead>
+              <tr>
+                <th>Flight Number</th>
+                <th>Origin</th>
+                <th>Destination</th>
+                <th>Departure</th>
+                <th>Arrival</th>
+                <th>Gate</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="flightsTableBody">
+              <!-- Flights will be loaded here via AJAX -->
+              <tr>
+                <td colspan="8" class="loading-spinner">
+                  <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                  </div>
+                  <p class="mt-2">Loading flights...</p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
+      </div>
 
-        <!-- Pagination -->
-        <div class="pagination-container">
-          <button class="btn btn-outline-secondary" id="prevPage" disabled>
-            <i class="fas fa-chevron-left"></i> Previous
-          </button>
-          <span class="fw-bold"
-            >Page <span id="currentPage">1</span> of
-            <span id="totalPages">1</span></span
-          >
-          <button class="btn btn-outline-secondary" id="nextPage">
-            Next <i class="fas fa-chevron-right"></i>
-          </button>
-        </div>
+      <!-- Pagination -->
+      <div class="pagination-container">
+        <button class="btn btn-outline-secondary" id="prevPage" disabled>
+          <i class="fas fa-chevron-left"></i> Previous
+        </button>
+        <span class="fw-bold"
+          >Page <span id="currentPage">1</span> of
+          <span id="totalPages">1</span></span
+        >
+        <button class="btn btn-outline-secondary" id="nextPage">
+          Next <i class="fas fa-chevron-right"></i>
+        </button>
       </div>
     </div>
 

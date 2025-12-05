@@ -18,6 +18,7 @@ function loadBookingDetails() {
 
   const booking = JSON.parse(bookingData);
   displayBookingDetails(booking);
+  populateBoardingPass(booking);
 }
 
 // Display booking details
@@ -49,97 +50,143 @@ function capitalizeFirst(str) {
 
 // Download PDF
 function downloadPDF() {
+  const booking = JSON.parse(localStorage.getItem("lastBooking"));
+
+  // Get QR code as image
+  const qrCanvas = document.querySelector("#qrcode canvas");
+  const qrImage = qrCanvas ? qrCanvas.toDataURL("image/png") : null;
+
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
 
-  const bookingData = JSON.parse(localStorage.getItem("lastBooking"));
+  let yPos = 20;
 
-  // Title
-  doc.setFontSize(24);
-  doc.setFont(undefined, "bold");
-  doc.text("AeroFlow - Booking Confirmation", 105, 20, { align: "center" });
-
-  // Booking Reference
-  doc.setFontSize(16);
-  doc.setFont(undefined, "bold");
-  doc.text("Booking Reference:", 20, 40);
-  doc.setFontSize(20);
+  // Header
+  doc.setFontSize(22);
   doc.setTextColor(30, 58, 138);
-  doc.text(bookingData.reference, 20, 50);
+  doc.text("AEROFLOW AIRLINES", 105, yPos, { align: "center" });
+
+  yPos += 10;
+  doc.setFontSize(18);
+  doc.text("BOARDING PASS", 105, yPos, { align: "center" });
+
+  yPos += 15;
+  doc.setDrawColor(30, 58, 138);
+  doc.setLineWidth(0.5);
+  doc.line(20, yPos, 190, yPos);
+
+  yPos += 15;
+
+  // Booking Reference (Large)
+  doc.setFontSize(16);
+  doc.setTextColor(59, 130, 246);
+  doc.text("BOOKING REFERENCE", 20, yPos);
+  doc.setFontSize(24);
   doc.setTextColor(0, 0, 0);
+  doc.text(booking.reference, 20, yPos + 10);
 
-  // Flight Details
+  yPos += 25;
+
+  // Passenger Information
+  doc.setFontSize(12);
+  doc.setTextColor(100, 116, 139);
+  doc.text("PASSENGER NAME", 20, yPos);
   doc.setFontSize(14);
-  doc.setFont(undefined, "bold");
-  doc.text("Flight Details", 20, 70);
-  doc.setFont(undefined, "normal");
-  doc.setFontSize(11);
+  doc.setTextColor(0, 0, 0);
+  doc.text(booking.passenger, 20, yPos + 7);
 
-  let y = 80;
-  doc.text(`Flight Number: ${bookingData.flightNumber}`, 20, y);
-  y += 8;
-  doc.text(
-    `Route: ${bookingData.origin || "DUB"} → ${
-      bookingData.destination || "JFK"
-    }`,
-    20,
-    y
-  );
-  y += 8;
-  doc.text(`Class: ${capitalizeFirst(bookingData.class)}`, 20, y);
-  y += 8;
-  doc.text(`Seat: ${bookingData.seat}`, 20, y);
-  y += 8;
-  doc.text(`Gate: ${bookingData.gate || "TBA"}`, 20, y);
+  yPos += 20;
 
-  // Passenger Details
-  y += 15;
-  doc.setFontSize(14);
-  doc.setFont(undefined, "bold");
-  doc.text("Passenger Details", 20, y);
-  doc.setFont(undefined, "normal");
-  doc.setFontSize(11);
+  // Flight Route (Large)
+  doc.setFontSize(12);
+  doc.setTextColor(100, 116, 139);
+  doc.text("FROM", 20, yPos);
+  doc.text("TO", 120, yPos);
 
-  y += 10;
-  doc.text(`Name: ${bookingData.passenger}`, 20, y);
-  y += 8;
-  if (bookingData.passportNumber) {
-    doc.text(`Passport: ${bookingData.passportNumber}`, 20, y);
-    y += 8;
-  }
-  if (bookingData.email) {
-    doc.text(`Email: ${bookingData.email}`, 20, y);
-    y += 8;
-  }
-  if (bookingData.phone) {
-    doc.text(`Phone: ${bookingData.phone}`, 20, y);
+  doc.setFontSize(28);
+  doc.setTextColor(30, 58, 138);
+  doc.text(booking.origin, 20, yPos + 12);
+  doc.text(booking.destination, 120, yPos + 12);
+
+  // Arrow
+  doc.setFontSize(20);
+  doc.text("→", 90, yPos + 12);
+
+  yPos += 30;
+
+  // Flight Details Grid
+  const details = [
+    { label: "FLIGHT", value: booking.flightNumber },
+    { label: "DATE", value: booking.departureTime },
+    { label: "GATE", value: booking.gate || "TBA" },
+    { label: "SEAT", value: booking.seat },
+    { label: "CLASS", value: booking.class.toUpperCase() },
+  ];
+
+  doc.setFontSize(10);
+  doc.setTextColor(100, 116, 139);
+
+  let xPos = 20;
+  details.forEach((detail, index) => {
+    doc.text(detail.label, xPos, yPos);
+    doc.setFontSize(12);
+    doc.setTextColor(0, 0, 0);
+    doc.text(detail.value, xPos, yPos + 7);
+    doc.setFontSize(10);
+    doc.setTextColor(100, 116, 139);
+    xPos += 35;
+  });
+
+  yPos += 25;
+
+  // Add QR Code if available
+  if (qrImage) {
+    doc.setDrawColor(226, 232, 240);
+    doc.setFillColor(248, 250, 252);
+    doc.rect(70, yPos, 60, 70, "FD");
+
+    doc.addImage(qrImage, "PNG", 80, yPos + 5, 40, 40);
+
+    doc.setFontSize(10);
+    doc.setTextColor(100, 116, 139);
+    doc.text("Scan at boarding gate", 105, yPos + 55, { align: "center" });
+
+    yPos += 80;
   }
 
   // Important Notice
-  y += 20;
-  doc.setFontSize(12);
-  doc.setFont(undefined, "bold");
-  doc.text("Important Information", 20, y);
-  doc.setFont(undefined, "normal");
-  doc.setFontSize(10);
+  doc.setDrawColor(251, 191, 36);
+  doc.setFillColor(254, 243, 199);
+  doc.rect(20, yPos, 170, 20, "FD");
 
-  y += 8;
-  doc.text("• Arrive at least 2 hours before departure", 20, y);
-  y += 6;
-  doc.text("• Valid ID and passport required at check-in", 20, y);
-  y += 6;
-  doc.text("• Web check-in opens 24 hours before departure", 20, y);
+  doc.setFontSize(10);
+  doc.setTextColor(146, 64, 14);
+  doc.text(
+    "⚠ Please arrive at the gate 30 minutes before departure",
+    105,
+    yPos + 12,
+    { align: "center" }
+  );
+
+  yPos += 30;
+
+  // Contact Information
+  doc.setFontSize(9);
+  doc.setTextColor(100, 116, 139);
+  doc.text("Passenger: " + booking.passenger, 20, yPos);
+  doc.text("Email: " + booking.email, 20, yPos + 5);
+  doc.text("Phone: " + booking.phone, 20, yPos + 10);
 
   // Footer
+  yPos = 280;
   doc.setFontSize(8);
-  doc.setTextColor(100, 100, 100);
-  doc.text("Generated by AeroFlow Airport Management System", 105, 280, {
+  doc.setTextColor(148, 163, 184);
+  doc.text("AeroFlow Airlines - Thank you for flying with us", 105, yPos, {
     align: "center",
   });
-  doc.text(new Date().toLocaleString(), 105, 285, { align: "center" });
 
   // Save PDF
-  doc.save(`AeroFlow-Booking-${bookingData.reference}.pdf`);
+  doc.save(`AeroFlow-BoardingPass-${booking.reference}.pdf`);
 }
 
 // Email booking (placeholder for now)
@@ -159,4 +206,59 @@ function emailBooking() {
   alert(
     `Booking confirmation will be sent to: ${email}\n\n(Email feature coming soon! For now, please download the PDF.)`
   );
+}
+
+// Generate QR Code
+function generateQRCode(bookingReference) {
+  // Clear previous QR code
+  $("#qrcode").empty();
+
+  // Generate QR code with booking data
+  const qrData = JSON.stringify({
+    reference: bookingReference,
+    timestamp: new Date().toISOString(),
+    type: "boarding_pass",
+  });
+
+  // Create QR code using qrcodejs library
+  new QRCode(document.getElementById("qrcode"), {
+    text: qrData,
+    width: 200,
+    height: 200,
+    colorDark: "#1e3a8a",
+    colorLight: "#ffffff",
+    correctLevel: QRCode.CorrectLevel.H,
+  });
+}
+
+// Populate boarding pass
+function populateBoardingPass(booking) {
+  $("#bpPassengerName").text(booking.passenger);
+  $("#bpReference").text(booking.reference);
+  $("#bpOrigin").text(booking.origin);
+  $("#bpDestination").text(booking.destination);
+  $("#bpFlightNumber").text(booking.flightNumber);
+
+  // Format date and time
+  const departureDate = new Date(booking.departureTime);
+  $("#bpDate").text(
+    departureDate.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    })
+  );
+  $("#bpTime").text(
+    departureDate.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+  );
+
+  $("#bpGate").text(booking.gate || "TBA");
+  $("#bpSeat").text(booking.seat);
+  $("#bpClass").text(booking.class.toUpperCase());
+
+  // Generate QR code
+  generateQRCode(booking.reference);
 }
