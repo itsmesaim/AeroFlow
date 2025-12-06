@@ -1,5 +1,7 @@
 const Flight = require("../models/Flight");
+const Booking = require("../models/Booking");
 const aircraftTypes = require("../config/aircraftTypes");
+const emailService = require("../services/emailService");
 
 // Helper function to emit socket events
 const emitFlightUpdate = (req, flight, eventType) => {
@@ -12,6 +14,57 @@ const emitFlightUpdate = (req, flight, eventType) => {
       type: eventType,
       flight: flight,
     });
+  }
+};
+
+// Helper function to notify passengers about flight status changes
+const notifyPassengers = async (flight, newStatus) => {
+  try {
+    // Only send emails for delayed, cancelled, and boarding statuses
+    if (!["delayed", "cancelled", "boarding"].includes(newStatus)) {
+      return;
+    }
+
+    const bookings = await Booking.find({
+      flightId: flight._id,
+      status: { $ne: "cancelled" },
+    }).populate("passengerId");
+
+    if (bookings.length === 0) {
+      console.log("No passengers to notify for flight:", flight.flightNumber);
+      return;
+    }
+
+    console.log(
+      `📧 Notifying ${bookings.length} passengers about ${newStatus} status for flight ${flight.flightNumber}`
+    );
+
+    // Send emails to all passengers
+    const emailPromises = bookings.map(async (booking) => {
+      const emailData = {
+        email: booking.passengerId.email,
+        passengerName: booking.passengerId.name,
+        bookingReference: booking.bookingReference,
+        flightNumber: flight.flightNumber,
+        origin: flight.origin,
+        destination: flight.destination,
+        gate: flight.gate || "TBA",
+      };
+
+      try {
+        await emailService.sendFlightStatusUpdate(emailData, newStatus);
+      } catch (err) {
+        console.error(
+          `Failed to send email to ${emailData.email}:`,
+          err.message
+        );
+      }
+    });
+
+    await Promise.allSettled(emailPromises);
+    console.log(`✅ Finished sending ${newStatus} notifications`);
+  } catch (error) {
+    console.error("Error notifying passengers:", error);
   }
 };
 
@@ -176,6 +229,8 @@ exports.updateFlight = async (req, res) => {
       });
     }
 
+    const oldStatus = flight.status;
+
     // If aircraft type is being changed, update capacity
     if (req.body.aircraft && req.body.aircraft !== flight.aircraft) {
       const aircraftConfig = aircraftTypes[req.body.aircraft];
@@ -214,6 +269,13 @@ exports.updateFlight = async (req, res) => {
 
     // Emit socket event for real-time update
     emitFlightUpdate(req, flight, "update");
+
+    // If status changed, notify passengers
+    if (req.body.status && req.body.status !== oldStatus) {
+      notifyPassengers(flight, req.body.status).catch((err) => {
+        console.error("Failed to notify passengers:", err);
+      });
+    }
 
     res.status(200).json({
       success: true,
@@ -277,6 +339,11 @@ exports.updateFlightStatus = async (req, res) => {
 
     // Emit socket event for status update
     emitFlightUpdate(req, flight, "status-change");
+
+    // Notify passengers about status change
+    notifyPassengers(flight, status).catch((err) => {
+      console.error("Failed to notify passengers:", err);
+    });
 
     res.status(200).json({
       success: true,

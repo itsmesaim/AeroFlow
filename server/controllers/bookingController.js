@@ -1,6 +1,7 @@
 const Booking = require("../models/Booking");
 const Flight = require("../models/Flight");
 const Passenger = require("../models/Passenger");
+const emailService = require("../services/emailService");
 
 // Generate unique booking reference
 const generateBookingReference = () => {
@@ -10,6 +11,18 @@ const generateBookingReference = () => {
     reference += chars.charAt(Math.floor(Math.random() * chars.length));
   }
   return reference;
+};
+
+// Helper function to format date/time
+const formatDateTime = (date) => {
+  return new Date(date).toLocaleString("en-US", {
+    weekday: "short",
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 };
 
 // @desc    Get all bookings
@@ -178,7 +191,10 @@ exports.createBooking = async (req, res) => {
       status: { $in: ["confirmed", "checked-in", "boarded"] },
     });
 
-    const totalCapacity = flight.capacity.economy + flight.capacity.business;
+    const totalCapacity =
+      flight.capacity.economy +
+      flight.capacity.business +
+      (flight.capacity.first || 0);
     if (bookingsCount >= totalCapacity) {
       return res.status(400).json({
         success: false,
@@ -211,9 +227,29 @@ exports.createBooking = async (req, res) => {
     // Populate before sending response
     await booking.populate(
       "flightId",
-      "flightNumber origin destination departureTime"
+      "flightNumber origin destination departureTime arrivalTime gate"
     );
     await booking.populate("passengerId", "name email passportNumber");
+
+    // Send confirmation email asynchronously
+    const emailData = {
+      email: booking.passengerId.email,
+      passengerName: booking.passengerId.name,
+      bookingReference: booking.bookingReference,
+      flightNumber: booking.flightId.flightNumber,
+      origin: booking.flightId.origin,
+      destination: booking.flightId.destination,
+      departureTime: formatDateTime(booking.flightId.departureTime),
+      arrivalTime: formatDateTime(booking.flightId.arrivalTime),
+      gate: booking.flightId.gate || "TBA",
+      seatNumber: booking.seatNumber,
+      class: booking.class.charAt(0).toUpperCase() + booking.class.slice(1),
+      passportNumber: booking.passengerId.passportNumber,
+    };
+
+    emailService.sendBookingConfirmation(emailData).catch((err) => {
+      console.error("Failed to send booking confirmation email:", err);
+    });
 
     res.status(201).json({
       success: true,

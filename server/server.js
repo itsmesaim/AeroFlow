@@ -18,6 +18,7 @@ const Flight = require("./models/Flight");
 const { protect } = require("./middleware/auth");
 const aircraftTypes = require("./config/aircraftTypes");
 const gateConfig = require("./config/gateConfig");
+const emailService = require("./services/emailService");
 
 const app = express();
 
@@ -91,6 +92,16 @@ app.use("/api/flights", require("./routes/flights"));
 app.use("/api/passengers", require("./routes/passengers"));
 app.use("/api/bookings", require("./routes/bookings"));
 app.use("/api/boarding", require("./routes/boarding"));
+
+// Initialize email service
+emailService
+  .initialize()
+  .then(() => {
+    console.log("✅ Email service initialized");
+  })
+  .catch((err) => {
+    console.error("❌ Email service initialization failed:", err);
+  });
 
 // Test route
 app.get("/api", (req, res) => {
