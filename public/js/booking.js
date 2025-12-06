@@ -1,9 +1,11 @@
 // Configuration
 const API_URL = "http://localhost:5000/api";
 let selectedFlight = null;
+let aircraftConfig = null;
 let occupiedSeats = [];
 let selectedSeatNumber = null;
 let currentPrice = 0;
+let currentClass = "economy";
 
 // Check if user is logged in
 function checkLoginForBooking() {
@@ -31,8 +33,10 @@ $(document).ready(function () {
 function setupEventListeners() {
   // Class selection
   $('input[name="class"]').on("change", function () {
+    currentClass = $(this).val();
     updateClassSelection();
     updatePrice();
+    generateSeats(currentClass); // Regenerate seats for selected class
   });
 
   // Form submission
@@ -60,14 +64,41 @@ function loadFlightDetails() {
     method: "GET",
     success: function (response) {
       selectedFlight = response.flight || response;
-      displayFlightSummary();
-      generateSeats();
-      loadOccupiedSeats();
+
+      // Load aircraft configuration for realistic seat layout
+      if (selectedFlight.aircraft) {
+        loadAircraftConfig(selectedFlight.aircraft);
+      } else {
+        // Fallback to basic layout if no aircraft type
+        displayFlightSummary();
+        loadOccupiedSeats();
+      }
     },
     error: function (xhr) {
       console.error("Error loading flight:", xhr);
       alert("Failed to load flight details");
       window.location.href = "flight-search.html";
+    },
+  });
+}
+
+// Load aircraft configuration
+function loadAircraftConfig(aircraftType) {
+  $.ajax({
+    url: `${API_URL}/aircraft-types/${aircraftType}`,
+    method: "GET",
+    success: function (response) {
+      aircraftConfig = response.aircraft;
+      console.log("Aircraft config loaded:", aircraftConfig);
+      displayFlightSummary();
+      loadOccupiedSeats();
+    },
+    error: function (xhr) {
+      console.error("Error loading aircraft config:", xhr);
+      // Fallback to basic layout
+      aircraftConfig = null;
+      displayFlightSummary();
+      loadOccupiedSeats();
     },
   });
 }
@@ -81,15 +112,30 @@ function displayFlightSummary() {
   $("#summaryArrival").text(formatDateTime(selectedFlight.arrivalTime));
   $("#summaryGate").text(selectedFlight.gate);
 
-  // Set prices
-  $("#economyPrice").text("$" + selectedFlight.price.economy);
-  $("#businessPrice").text("$" + selectedFlight.price.business);
+  // Set prices for all classes
+  if (selectedFlight.price) {
+    $("#economyPrice").text("$" + selectedFlight.price.economy);
+    $("#businessPrice").text("$" + selectedFlight.price.business);
 
-  // Set initial price
-  currentPrice = selectedFlight.price.economy;
-  $("#totalPrice").text("$" + currentPrice);
+    // Check if first class exists (capacity > 0)
+    if (
+      selectedFlight.capacity &&
+      selectedFlight.capacity.first > 0 &&
+      selectedFlight.price.first
+    ) {
+      $("#firstPrice").text("$" + selectedFlight.price.first);
+      $("#firstOption").show();
+    } else {
+      // Hide first class option if not available
+      $("#firstOption").hide();
+    }
 
-  // Mark economy as selected
+    // Set initial price (economy)
+    currentPrice = selectedFlight.price.economy;
+    $("#totalPrice").text("$" + currentPrice);
+  }
+
+  // Mark economy as selected by default
   $("#economyOption").addClass("selected");
 }
 
@@ -100,49 +146,165 @@ function updateClassSelection() {
 
   if (selectedClass === "economy") {
     $("#economyOption").addClass("selected");
-  } else {
+  } else if (selectedClass === "business") {
     $("#businessOption").addClass("selected");
+  } else if (selectedClass === "first") {
+    $("#firstOption").addClass("selected");
   }
 
-  $("#summaryClass").text(
-    selectedClass.charAt(0).toUpperCase() + selectedClass.slice(1)
-  );
+  const displayClass =
+    selectedClass.charAt(0).toUpperCase() + selectedClass.slice(1);
+  if (selectedClass === "first") {
+    $("#summaryClass").text("First Class");
+  } else {
+    $("#summaryClass").text(displayClass);
+  }
 }
 
 // Update price
 function updatePrice() {
   const selectedClass = $('input[name="class"]:checked').val();
-  currentPrice =
-    selectedClass === "economy"
-      ? selectedFlight.price.economy
-      : selectedFlight.price.business;
 
-  $("#totalPrice").text("$" + currentPrice);
+  if (selectedFlight.price[selectedClass]) {
+    currentPrice = selectedFlight.price[selectedClass];
+    $("#totalPrice").text("$" + currentPrice);
+  }
 }
 
-// Generate seat grid
-function generateSeats() {
+// Generate seat grid based on class and aircraft config
+function generateSeats(travelClass = "economy") {
   const seatGrid = $("#seatGrid");
   seatGrid.empty();
 
-  const rows = 20;
-  const seatsPerRow = 6;
-  const columns = ["A", "B", "C", "D", "E", "F"];
+  // Use aircraft config if available, otherwise use fallback
+  if (aircraftConfig && aircraftConfig.seatLayout) {
+    generateSeatsFromAircraftConfig(travelClass, seatGrid);
+  } else {
+    generateDefaultSeats(travelClass, seatGrid);
+  }
+}
 
-  for (let row = 1; row <= rows; row++) {
-    for (let col = 0; col < seatsPerRow; col++) {
-      const seatNumber = `${row}${columns[col]}`;
+// Generate seats using aircraft configuration
+function generateSeatsFromAircraftConfig(travelClass, seatGrid) {
+  const layout = aircraftConfig.seatLayout[travelClass];
+
+  // Check if this class exists for this aircraft
+  if (!layout || !layout.rows || layout.rows.length < 2) {
+    seatGrid.append(`
+      <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #64748b;">
+        <i class="fas fa-info-circle" style="font-size: 48px; margin-bottom: 15px;"></i>
+        <p><strong>This class is not available on this aircraft (${aircraftConfig.name})</strong></p>
+      </div>
+    `);
+    return;
+  }
+
+  const [startRow, endRow] = layout.rows;
+  const columns = layout.columns;
+
+  if (!columns || columns.length === 0) {
+    console.error("No seat columns defined for", travelClass);
+    return;
+  }
+
+  // Generate seats row by row
+  for (let row = startRow; row <= endRow; row++) {
+    for (let i = 0; i < columns.length; i++) {
+      const col = columns[i];
+      const seatNumber = `${row}${col}`;
+
+      // Check if seat is occupied
+      const isOccupied = occupiedSeats.includes(seatNumber);
+
       const seatElement = $(`
-                <div class="seat available" data-seat="${seatNumber}">
-                    ${seatNumber}
-                </div>
-            `);
+        <div class="seat ${
+          isOccupied ? "occupied" : "available"
+        }" data-seat="${seatNumber}">
+          ${seatNumber}
+        </div>
+      `);
 
-      seatElement.on("click", function () {
-        selectSeat(seatNumber);
-      });
+      // Only allow clicking on available seats
+      if (!isOccupied) {
+        seatElement.on("click", function () {
+          selectSeat(seatNumber);
+        });
+      }
 
       seatGrid.append(seatElement);
+
+      // Add aisle gaps based on aircraft configuration
+      // For most configurations: aisle after column B (for 2-2) or C (for 3-3)
+      if (columns.length >= 6 && i === 2) {
+        // 3-3 config (economy): aisle after column C
+        seatGrid.append('<div style="grid-column: span 1;"></div>');
+      } else if (columns.length === 4 && i === 1) {
+        // 2-2 config (business/first): aisle after column B
+        seatGrid.append('<div style="grid-column: span 1;"></div>');
+      }
+    }
+  }
+}
+
+// Fallback: Generate default seats if no aircraft config
+function generateDefaultSeats(travelClass, seatGrid) {
+  let rows, seatsPerRow, startRow, columns;
+
+  // Define seat layout based on class (fallback configuration)
+  if (travelClass === "first") {
+    rows = 2;
+    seatsPerRow = 4;
+    startRow = 1;
+    columns = ["A", "B", "C", "D"];
+  } else if (travelClass === "business") {
+    rows = 6;
+    seatsPerRow = 4;
+    startRow = 3;
+    columns = ["A", "B", "C", "D"];
+  } else {
+    // economy
+    rows = 20;
+    seatsPerRow = 6;
+    startRow = 9;
+    columns = ["A", "B", "C", "D", "E", "F"];
+  }
+
+  // Generate seats
+  for (let row = startRow; row < startRow + rows; row++) {
+    for (let col = 0; col < seatsPerRow; col++) {
+      const seatNumber = `${row}${columns[col]}`;
+
+      // Check if seat is occupied
+      const isOccupied = occupiedSeats.includes(seatNumber);
+
+      const seatElement = $(`
+        <div class="seat ${
+          isOccupied ? "occupied" : "available"
+        }" data-seat="${seatNumber}">
+          ${seatNumber}
+        </div>
+      `);
+
+      // Only allow clicking on available seats
+      if (!isOccupied) {
+        seatElement.on("click", function () {
+          selectSeat(seatNumber);
+        });
+      }
+
+      seatGrid.append(seatElement);
+
+      // Add aisle gap for economy (after seat C)
+      if (travelClass === "economy" && col === 2) {
+        seatGrid.append('<div style="grid-column: span 1;"></div>');
+      }
+      // Add aisle gap for business/first (after seat B)
+      else if (
+        (travelClass === "business" || travelClass === "first") &&
+        col === 1
+      ) {
+        seatGrid.append('<div style="grid-column: span 1;"></div>');
+      }
     }
   }
 }
@@ -164,21 +326,14 @@ function loadOccupiedSeats() {
         });
       }
 
-      markOccupiedSeats();
+      // Generate seats after we know which are occupied
+      generateSeats(currentClass);
     },
     error: function (xhr) {
       console.error("Error loading occupied seats:", xhr);
+      // Still generate seats even if loading occupied fails
+      generateSeats(currentClass);
     },
-  });
-}
-
-// Mark occupied seats
-function markOccupiedSeats() {
-  occupiedSeats.forEach(function (seatNumber) {
-    $(`.seat[data-seat="${seatNumber}"]`)
-      .removeClass("available")
-      .addClass("occupied")
-      .off("click");
   });
 }
 
@@ -230,7 +385,7 @@ function submitBooking() {
   // Show loading
   $("#loadingOverlay").fadeIn();
 
-  // Create passenger directly (no token needed for public endpoint)
+  // Create passenger
   createPassengerPublic(passengerData, bookingClass, baggage);
 }
 
@@ -247,12 +402,11 @@ function createPassengerPublic(passengerData, bookingClass, baggage) {
       createBookingPublic(response.passenger._id, bookingClass, baggage);
     },
     error: function (xhr) {
-      // If passenger already exists (duplicate passport), try to get the ID from error
+      // If passenger already exists (duplicate passport), show error
       if (
         xhr.status === 400 &&
         xhr.responseJSON?.error?.includes("already exists")
       ) {
-        // For now, show error - we'll need to handle this better
         $("#loadingOverlay").hide();
         alert(
           "A passenger with this passport number already exists. Please use a different passport number or contact support."
@@ -322,7 +476,7 @@ function createBookingPublic(passengerId, bookingClass, baggage) {
   });
 }
 
-// Helper function to format datetime (if not already in your file)
+// Helper function to format datetime
 function formatDateTime(dateString) {
   const date = new Date(dateString);
   return date.toLocaleString("en-US", {

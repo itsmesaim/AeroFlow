@@ -13,6 +13,12 @@ const flightSchema = new mongoose.Schema({
     required: [true, "Please add an airline"],
     trim: true,
   },
+  // Aircraft type from predefined list
+  aircraft: {
+    type: String,
+    required: [true, "Please select an aircraft type"],
+    enum: ["A320", "A330", "B737", "B777", "B787", "A380"],
+  },
   origin: {
     type: String,
     required: [true, "Please add origin"],
@@ -42,19 +48,35 @@ const flightSchema = new mongoose.Schema({
     enum: ["scheduled", "boarding", "departed", "delayed", "cancelled"],
     default: "scheduled",
   },
-  aircraft: {
-    type: String,
-    trim: true,
-  },
+  // Auto-populated based on aircraft type
   capacity: {
-    economy: { type: Number, default: 150 },
-    business: { type: Number, default: 20 },
-    first: { type: Number, default: 8 },
+    first: {
+      type: Number,
+      default: 0,
+    },
+    business: {
+      type: Number,
+      required: true,
+    },
+    economy: {
+      type: Number,
+      required: true,
+    },
   },
+  // UPDATED: Auto-populated with defaults, but can be customized
   price: {
-    economy: { type: Number, required: true },
-    business: { type: Number, required: true },
-    first: { type: Number, required: true },
+    first: {
+      type: Number,
+      default: 0,
+    },
+    business: {
+      type: Number,
+      required: true,
+    },
+    economy: {
+      type: Number,
+      required: true,
+    },
   },
   createdAt: {
     type: Date,

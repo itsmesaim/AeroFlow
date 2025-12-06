@@ -16,6 +16,8 @@ connectDB();
 const Booking = require("./models/Booking");
 const Flight = require("./models/Flight");
 const { protect } = require("./middleware/auth");
+const aircraftTypes = require("./config/aircraftTypes");
+const gateConfig = require("./config/gateConfig");
 
 const app = express();
 
@@ -155,7 +157,7 @@ app.get("/api/analytics", protect, async (req, res) => {
     // KPIs
     const totalBookings = await Booking.countDocuments();
 
-    // FIX: Calculate revenue based on booking class
+    // Calculate revenue based on booking class
     const bookingsWithFlights = await Booking.find({
       status: { $ne: "cancelled" },
     }).populate("flightId");
@@ -195,7 +197,7 @@ app.get("/api/analytics", protect, async (req, res) => {
       { $sort: { _id: 1 } },
     ]);
 
-    // FIX: Revenue by day with class-based pricing
+    //  Revenue by day with class-based pricing
     const revenueByDay = await Booking.aggregate([
       {
         $match: {
@@ -268,4 +270,102 @@ const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
   console.log(`Visit: http://localhost:${PORT}`);
+});
+
+app.get("/api/aircraft-types", (req, res) => {
+  res.json({
+    success: true,
+    aircraftTypes: Object.keys(aircraftTypes).map((key) => ({
+      code: key,
+      name: aircraftTypes[key].name,
+      capacity: aircraftTypes[key].capacity,
+      defaultPrice: aircraftTypes[key].defaultPrice,
+    })),
+  });
+});
+
+// Get specific aircraft config
+app.get("/api/aircraft-types/:type", (req, res) => {
+  const aircraft = aircraftTypes[req.params.type];
+
+  if (!aircraft) {
+    return res.status(404).json({
+      success: false,
+      message: "Aircraft type not found",
+    });
+  }
+
+  res.json({
+    success: true,
+    aircraft: {
+      code: req.params.type,
+      ...aircraft,
+    },
+  });
+});
+
+// Get all gates
+app.get("/api/gates", (req, res) => {
+  const gates = gateConfig.getAllGates();
+  res.json({
+    success: true,
+    gates,
+  });
+});
+
+// Get compatible gates for aircraft type
+app.get("/api/gates/compatible/:aircraftType", (req, res) => {
+  const { aircraftType } = req.params;
+  const gates = gateConfig.getCompatibleGates(aircraftType);
+
+  res.json({
+    success: true,
+    aircraftType,
+    gates,
+  });
+});
+
+// Get available gates (not assigned to active flights)
+app.get("/api/gates/available", protect, async (req, res) => {
+  try {
+    const { aircraftType, dateTime } = req.query;
+
+    // Get all gates
+    let allGates = aircraftType
+      ? gateConfig.getCompatibleGates(aircraftType)
+      : gateConfig.getAllGates();
+
+    // Find occupied gates for the given time window (±2 hours)
+    const targetTime = dateTime ? new Date(dateTime) : new Date();
+    const startTime = new Date(targetTime.getTime() - 2 * 60 * 60 * 1000); // 2 hours before
+    const endTime = new Date(targetTime.getTime() + 2 * 60 * 60 * 1000); // 2 hours after
+
+    const occupiedFlights = await Flight.find({
+      departureTime: { $gte: startTime, $lte: endTime },
+      status: { $in: ["scheduled", "boarding", "delayed"] },
+      gate: { $exists: true, $ne: "" },
+    }).select("gate departureTime flightNumber");
+
+    const occupiedGates = occupiedFlights.map((f) => f.gate);
+
+    // Mark gates as available or occupied
+    const gatesWithStatus = allGates.map((gateInfo) => ({
+      ...gateInfo,
+      available: !occupiedGates.includes(gateInfo.gate),
+      occupiedBy: occupiedGates.includes(gateInfo.gate)
+        ? occupiedFlights.find((f) => f.gate === gateInfo.gate)
+        : null,
+    }));
+
+    res.json({
+      success: true,
+      gates: gatesWithStatus,
+      timeWindow: { start: startTime, end: endTime },
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
 });

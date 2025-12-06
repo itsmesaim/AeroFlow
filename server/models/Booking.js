@@ -24,7 +24,7 @@ const BookingSchema = new mongoose.Schema(
     },
     class: {
       type: String,
-      enum: ["economy", "business"],
+      enum: ["economy", "business", "first"],
       required: true,
     },
     status: {

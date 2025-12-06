@@ -1,11 +1,14 @@
 const Flight = require("../models/Flight");
+const aircraftTypes = require("../config/aircraftTypes");
 
 // Helper function to emit socket events
 const emitFlightUpdate = (req, flight, eventType) => {
   const io = req.app.get("io");
   if (io) {
-    console.log(`Emitting flight update: ${eventType} for flight ${flight.flightNumber}`);
-    io.emit("flight-updated", {  // Changed from io.to(...).emit to io.emit
+    console.log(
+      `Emitting flight update: ${eventType} for flight ${flight.flightNumber}`
+    );
+    io.emit("flight-updated", {
       type: eventType,
       flight: flight,
     });
@@ -99,7 +102,46 @@ exports.getFlight = async (req, res) => {
 // @access  Private/Admin
 exports.createFlight = async (req, res) => {
   try {
-    const flight = await Flight.create(req.body);
+    const { aircraft } = req.body;
+
+    // Validate aircraft type
+    const aircraftConfig = aircraftTypes[aircraft];
+
+    if (!aircraftConfig) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid aircraft type. Please select a valid aircraft.",
+      });
+    }
+
+    // Auto-populate capacity from aircraft type
+    const flightData = {
+      ...req.body,
+      capacity: {
+        first: aircraftConfig.capacity.first,
+        business: aircraftConfig.capacity.business,
+        economy: aircraftConfig.capacity.economy,
+      },
+    };
+
+    // Use provided prices or defaults from aircraft type
+    if (!req.body.price || Object.keys(req.body.price).length === 0) {
+      flightData.price = {
+        first: aircraftConfig.defaultPrice.first,
+        business: aircraftConfig.defaultPrice.business,
+        economy: aircraftConfig.defaultPrice.economy,
+      };
+    } else {
+      // Use provided prices, fill missing with defaults
+      flightData.price = {
+        first: req.body.price.first || aircraftConfig.defaultPrice.first,
+        business:
+          req.body.price.business || aircraftConfig.defaultPrice.business,
+        economy: req.body.price.economy || aircraftConfig.defaultPrice.economy,
+      };
+    }
+
+    const flight = await Flight.create(flightData);
 
     res.status(201).json({
       success: true,
@@ -108,9 +150,15 @@ exports.createFlight = async (req, res) => {
     });
   } catch (error) {
     if (error.code === 11000) {
-      return res.status(400).json({ message: "Flight number already exists" });
+      return res.status(400).json({
+        success: false,
+        message: "Flight number already exists",
+      });
     }
-    res.status(500).json({ message: error.message });
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
@@ -126,6 +174,36 @@ exports.updateFlight = async (req, res) => {
         success: false,
         error: "Flight not found",
       });
+    }
+
+    // If aircraft type is being changed, update capacity
+    if (req.body.aircraft && req.body.aircraft !== flight.aircraft) {
+      const aircraftConfig = aircraftTypes[req.body.aircraft];
+
+      if (!aircraftConfig) {
+        return res.status(400).json({
+          success: false,
+          error: "Invalid aircraft type",
+        });
+      }
+
+      // Update capacity based on new aircraft type
+      req.body.capacity = {
+        first: aircraftConfig.capacity.first,
+        business: aircraftConfig.capacity.business,
+        economy: aircraftConfig.capacity.economy,
+      };
+
+      // Optionally update prices to new defaults (or keep existing)
+      if (!req.body.price) {
+        req.body.price = {
+          first: req.body.price?.first || aircraftConfig.defaultPrice.first,
+          business:
+            req.body.price?.business || aircraftConfig.defaultPrice.business,
+          economy:
+            req.body.price?.economy || aircraftConfig.defaultPrice.economy,
+        };
+      }
     }
 
     // Update flight
@@ -196,6 +274,9 @@ exports.updateFlightStatus = async (req, res) => {
     if (!flight) {
       return res.status(404).json({ message: "Flight not found" });
     }
+
+    // Emit socket event for status update
+    emitFlightUpdate(req, flight, "status-change");
 
     res.status(200).json({
       success: true,

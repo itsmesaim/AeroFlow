@@ -5,10 +5,13 @@ let totalPages = 1;
 let currentFilter = "all";
 let searchQuery = "";
 let searchTimeout = null;
+let aircraftTypes = [];
+let availableGates = [];
 
 // Initialize on page load
 $(document).ready(function () {
   checkAuth();
+  loadAircraftTypes();
   loadFlights();
   setupEventListeners();
 });
@@ -25,6 +28,46 @@ function checkAuth() {
 // Get auth token
 function getAuthToken() {
   return localStorage.getItem("token");
+}
+
+// Load aircraft types
+function loadAircraftTypes() {
+  $.ajax({
+    url: `${API_URL}/aircraft-types`,
+    method: "GET",
+    success: function (response) {
+      aircraftTypes = response.aircraftTypes;
+      console.log("Aircraft types loaded:", aircraftTypes);
+      populateAircraftDropdowns();
+    },
+    error: function (xhr) {
+      console.error("Error loading aircraft types:", xhr);
+      showError("Failed to load aircraft types");
+    },
+  });
+}
+
+// Populate aircraft dropdowns
+function populateAircraftDropdowns() {
+  const addSelect = $("#aircraftType");
+  const editSelect = $("#editAircraftType");
+
+  // Clear existing options
+  addSelect.empty().append('<option value="">Select aircraft type...</option>');
+  editSelect
+    .empty()
+    .append('<option value="">Select aircraft type...</option>');
+
+  // Populate both dropdowns
+  aircraftTypes.forEach(function (aircraft) {
+    const option = `
+      <option value="${aircraft.code}">
+        ${aircraft.name} (F:${aircraft.capacity.first} B:${aircraft.capacity.business} E:${aircraft.capacity.economy})
+      </option>
+    `;
+    addSelect.append(option);
+    editSelect.append(option);
+  });
 }
 
 // Setup all event listeners
@@ -63,6 +106,213 @@ function setupEventListeners() {
       loadFlights();
     }
   });
+
+  // Aircraft type selection in Add modal
+  $("#aircraftType").on("change", function () {
+    handleAircraftSelection($(this).val(), "add");
+    loadAvailableGates();
+  });
+
+  // Departure time change in Add modal
+  $("#departureTime").on("change", function () {
+    loadAvailableGates();
+  });
+
+  // Aircraft type selection in Edit modal
+  $("#editAircraftType").on("change", function () {
+    handleAircraftSelection($(this).val(), "edit");
+    loadAvailableGatesForEdit();
+  });
+
+  // Departure time change in Edit modal
+  $("#editDepartureTime").on("change", function () {
+    loadAvailableGatesForEdit();
+  });
+}
+
+// Handle aircraft type selection
+function handleAircraftSelection(selectedCode, mode) {
+  if (!selectedCode) {
+    if (mode === "add") {
+      $("#capacityDisplay").hide();
+      $("#priceSection").hide();
+    }
+    return;
+  }
+
+  const aircraft = aircraftTypes.find((a) => a.code === selectedCode);
+
+  if (!aircraft) return;
+
+  if (mode === "add") {
+    // Show capacity info
+    if (aircraft.capacity.first > 0) {
+      $("#firstCapacityInfo")
+        .text(`First Class: ${aircraft.capacity.first} seats`)
+        .show();
+      $("#firstPriceDiv").show();
+      $("#firstPrice").attr(
+        "placeholder",
+        `Default: $${aircraft.defaultPrice.first}`
+      );
+    } else {
+      $("#firstCapacityInfo").hide();
+      $("#firstPriceDiv").hide();
+    }
+
+    $("#businessCapacityInfo").text(
+      `Business Class: ${aircraft.capacity.business} seats`
+    );
+    $("#economyCapacityInfo").text(
+      `Economy Class: ${aircraft.capacity.economy} seats`
+    );
+
+    $("#businessPrice").attr(
+      "placeholder",
+      `Default: $${aircraft.defaultPrice.business}`
+    );
+    $("#economyPrice").attr(
+      "placeholder",
+      `Default: $${aircraft.defaultPrice.economy}`
+    );
+
+    $("#capacityDisplay").show();
+    $("#priceSection").show();
+    $("#aircraftInfo").text(
+      `${aircraft.name} - Total: ${
+        aircraft.capacity.first +
+        aircraft.capacity.business +
+        aircraft.capacity.economy
+      } seats`
+    );
+  } else {
+    // Edit mode
+    if (aircraft.capacity.first > 0) {
+      $("#editFirstPriceDiv").show();
+    } else {
+      $("#editFirstPriceDiv").hide();
+    }
+
+    $("#editAircraftInfo").text(
+      `${aircraft.name} - Capacity: F:${aircraft.capacity.first} B:${aircraft.capacity.business} E:${aircraft.capacity.economy}`
+    );
+  }
+}
+
+// Load available gates for Add modal
+function loadAvailableGates() {
+  const aircraftType = $("#aircraftType").val();
+  const departureTime = $("#departureTime").val();
+
+  if (!aircraftType) {
+    $("#gateInfo").html(
+      '<i class="fas fa-info-circle"></i> Select aircraft type first'
+    );
+    $("#gate").empty().append('<option value="">Select gate...</option>');
+    return;
+  }
+
+  if (!departureTime) {
+    $("#gateInfo").html(
+      '<i class="fas fa-info-circle"></i> Select departure time to see available gates'
+    );
+    $("#gate").empty().append('<option value="">Select gate...</option>');
+    return;
+  }
+
+  // Show loading
+  $("#gateInfo").html(
+    '<i class="fas fa-spinner fa-spin"></i> Loading available gates...'
+  );
+
+  $.ajax({
+    url: `${API_URL}/gates/available`,
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${getAuthToken()}`,
+    },
+    data: {
+      aircraftType: aircraftType,
+      dateTime: departureTime,
+    },
+    success: function (response) {
+      availableGates = response.gates;
+      populateGateDropdown(response.gates, "gate");
+      const availableCount = response.gates.filter((g) => g.available).length;
+      $("#gateInfo").html(
+        `<i class="fas fa-check-circle text-success"></i> ${availableCount} gates available`
+      );
+    },
+    error: function (xhr) {
+      console.error("Error loading gates:", xhr);
+      $("#gateInfo").html(
+        '<i class="fas fa-exclamation-circle text-danger"></i> Failed to load gates'
+      );
+    },
+  });
+}
+
+// Load available gates for Edit modal
+function loadAvailableGatesForEdit() {
+  const aircraftType = $("#editAircraftType").val();
+  const departureTime = $("#editDepartureTime").val();
+
+  if (!aircraftType || !departureTime) return;
+
+  $.ajax({
+    url: `${API_URL}/gates/available`,
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${getAuthToken()}`,
+    },
+    data: {
+      aircraftType: aircraftType,
+      dateTime: departureTime,
+    },
+    success: function (response) {
+      populateGateDropdown(response.gates, "editGate");
+    },
+    error: function (xhr) {
+      console.error("Error loading gates:", xhr);
+    },
+  });
+}
+
+// Populate gate dropdown
+function populateGateDropdown(gates, selectId) {
+  const gateSelect = $(`#${selectId}`);
+  gateSelect.empty().append('<option value="">Select gate...</option>');
+
+  // Group by terminal
+  const byTerminal = {};
+  gates.forEach((g) => {
+    if (!byTerminal[g.terminal]) byTerminal[g.terminal] = [];
+    byTerminal[g.terminal].push(g);
+  });
+
+  // Add gates grouped by terminal
+  Object.keys(byTerminal)
+    .sort()
+    .forEach((terminal) => {
+      const terminalGates = byTerminal[terminal];
+
+      // Add optgroup for terminal
+      const optgroup = $(`<optgroup label="Terminal ${terminal}"></optgroup>`);
+
+      terminalGates.forEach((gateInfo) => {
+        if (gateInfo.available) {
+          optgroup.append(
+            `<option value="${gateInfo.gate}">${gateInfo.gate} - ${gateInfo.terminalName}</option>`
+          );
+        } else {
+          optgroup.append(
+            `<option value="${gateInfo.gate}" disabled>${gateInfo.gate} - Occupied</option>`
+          );
+        }
+      });
+
+      gateSelect.append(optgroup);
+    });
 }
 
 // Load flights with AJAX
@@ -92,10 +342,7 @@ function loadFlights() {
     },
     data: params,
     success: function (response) {
-      // Use "flights" from your API response
       displayFlights(response.flights);
-
-      // Build pagination object from your API response
       const pagination = {
         currentPage: response.page,
         totalPages: response.pages,
@@ -125,7 +372,6 @@ function displayFlights(flights) {
     tbody.append(row);
   });
 
-  // Add fade-in animation
   tbody.find("tr").hide().fadeIn(600);
 }
 
@@ -138,20 +384,31 @@ function createFlightRow(flight) {
   return `
         <tr data-flight-id="${flight._id}">
             <td><strong>${flight.flightNumber}</strong></td>
+            <td>${flight.aircraft || "N/A"}</td>
             <td>${flight.origin}</td>
             <td>${flight.destination}</td>
             <td>${departureTime}</td>
             <td>${arrivalTime}</td>
-            <td><span class="badge bg-secondary">${flight.gate}</span></td>
+            <td><span class="badge bg-secondary">${
+              flight.gate || "TBA"
+            }</span></td>
             <td>${statusBadge}</td>
             <td>
-                <button class="action-btn btn-status" onclick="openStatusModal('${flight._id}', '${flight.flightNumber}', '${flight.status}')" title="Update Status">
+                <button class="action-btn btn-status" onclick="openStatusModal('${
+                  flight._id
+                }', '${flight.flightNumber}', '${
+    flight.status
+  }')" title="Update Status">
                     <i class="fas fa-sync-alt"></i>
                 </button>
-                <button class="action-btn btn-edit" onclick="openEditModal('${flight._id}')" title="Edit">
+                <button class="action-btn btn-edit" onclick="openEditModal('${
+                  flight._id
+                }')" title="Edit">
                     <i class="fas fa-edit"></i>
                 </button>
-                <button class="action-btn btn-delete" onclick="confirmDelete('${flight._id}', '${flight.flightNumber}')" title="Delete">
+                <button class="action-btn btn-delete" onclick="confirmDelete('${
+                  flight._id
+                }', '${flight.flightNumber}')" title="Delete">
                     <i class="fas fa-trash"></i>
                 </button>
             </td>
@@ -195,7 +452,6 @@ function updatePagination(pagination) {
   $("#currentPage").text(currentPage);
   $("#totalPages").text(totalPages);
 
-  // Enable/disable pagination buttons
   if (currentPage <= 1) {
     $("#prevPage").prop("disabled", true);
   } else {
@@ -214,7 +470,7 @@ function showLoading() {
   const tbody = $("#flightsTableBody");
   tbody.html(`
         <tr>
-            <td colspan="8" class="loading-spinner">
+            <td colspan="9" class="loading-spinner">
                 <div class="spinner-border text-primary" role="status">
                     <span class="visually-hidden">Loading...</span>
                 </div>
@@ -229,7 +485,7 @@ function showNoResults() {
   const tbody = $("#flightsTableBody");
   tbody.html(`
         <tr>
-            <td colspan="8" class="no-results">
+            <td colspan="9" class="no-results">
                 <i class="fas fa-search fa-3x mb-3"></i>
                 <p>No flights found</p>
             </td>
@@ -239,33 +495,47 @@ function showNoResults() {
 
 // Add new flight
 function addFlight() {
-  // Get form values
   const flightData = {
-    flightNumber: $("#flightNumber").val().trim(),
-    airline: $("#aircraftType").val().trim(),
-    origin: $("#origin").val().trim(),
-    destination: $("#destination").val().trim(),
+    flightNumber: $("#flightNumber").val().trim().toUpperCase(),
+    airline: $("#airline").val().trim(),
+    aircraft: $("#aircraftType").val(),
+    origin: $("#origin").val().trim().toUpperCase(),
+    destination: $("#destination").val().trim().toUpperCase(),
     departureTime: $("#departureTime").val(),
     arrivalTime: $("#arrivalTime").val(),
-    gate: $("#gate").val().trim(),
-    capacity: {
-      economy: parseInt($("#capacity").val()),
-      business: 20,
-    },
-    price: {
-      economy: 200,
-      business: 600,
-    },
-    aircraft: $("#aircraftType").val().trim(),
+    gate: $("#gate").val(),
     status: $("#status").val(),
   };
+
+  // Validate aircraft type
+  if (!flightData.aircraft) {
+    showError("Please select an aircraft type");
+    return;
+  }
+
+  // Validate gate
+  if (!flightData.gate) {
+    showError("Please select a gate");
+    return;
+  }
+
+  // Add custom prices if provided (optional)
+  const prices = {};
+  if ($("#firstPrice").val()) prices.first = parseFloat($("#firstPrice").val());
+  if ($("#businessPrice").val())
+    prices.business = parseFloat($("#businessPrice").val());
+  if ($("#economyPrice").val())
+    prices.economy = parseFloat($("#economyPrice").val());
+
+  if (Object.keys(prices).length > 0) {
+    flightData.price = prices;
+  }
 
   // Validate
   if (!validateFlightData(flightData)) {
     return;
   }
 
-  // AJAX request
   $.ajax({
     url: `${API_URL}/flights`,
     method: "POST",
@@ -275,16 +545,14 @@ function addFlight() {
     },
     data: JSON.stringify(flightData),
     success: function (response) {
-      // Close modal
       $("#addFlightModal").modal("hide");
-
-      // Reset form
       $("#addFlightForm")[0].reset();
-
-      // Show success message
+      $("#capacityDisplay").hide();
+      $("#priceSection").hide();
+      $("#gateInfo").html(
+        '<i class="fas fa-info-circle"></i> Select aircraft type first'
+      );
       showSuccess("Flight added successfully!");
-
-      // Reload flights
       loadFlights();
     },
     error: function (xhr) {
@@ -300,7 +568,6 @@ function addFlight() {
 
 // Open edit modal
 function openEditModal(flightId) {
-  // Fetch flight details via AJAX
   $.ajax({
     url: `${API_URL}/flights/${flightId}`,
     method: "GET",
@@ -308,22 +575,37 @@ function openEditModal(flightId) {
       Authorization: `Bearer ${getAuthToken()}`,
     },
     success: function (response) {
-      // Your API returns the flight directly in response.flight or response
       const flight = response.flight || response;
 
-      // Populate form
       $("#editFlightId").val(flight._id);
       $("#editFlightNumber").val(flight.flightNumber);
-      $("#editAircraftType").val(flight.airline || flight.aircraft);
+      $("#editAirline").val(flight.airline);
+      $("#editAircraftType").val(flight.aircraft);
       $("#editOrigin").val(flight.origin);
       $("#editDestination").val(flight.destination);
       $("#editDepartureTime").val(formatDateForInput(flight.departureTime));
       $("#editArrivalTime").val(formatDateForInput(flight.arrivalTime));
       $("#editGate").val(flight.gate);
-      $("#editCapacity").val(flight.capacity?.economy || 150);
       $("#editStatus").val(flight.status);
 
-      // Show modal
+      // Set prices
+      if (flight.price) {
+        if (flight.price.first && flight.price.first > 0) {
+          $("#editFirstPrice").val(flight.price.first);
+          $("#editFirstPriceDiv").show();
+        } else {
+          $("#editFirstPriceDiv").hide();
+        }
+        $("#editBusinessPrice").val(flight.price.business);
+        $("#editEconomyPrice").val(flight.price.economy);
+      }
+
+      // Trigger aircraft change to show info
+      handleAircraftSelection(flight.aircraft, "edit");
+
+      // Load gates for edit
+      loadAvailableGatesForEdit();
+
       $("#editFlightModal").modal("show");
     },
     error: function (xhr) {
@@ -349,23 +631,20 @@ function updateFlight() {
   const flightId = $("#editFlightId").val();
 
   const flightData = {
-    flightNumber: $("#editFlightNumber").val().trim(),
-    airline: $("#editAircraftType").val().trim(),
-    origin: $("#editOrigin").val().trim(),
-    destination: $("#editDestination").val().trim(),
+    flightNumber: $("#editFlightNumber").val().trim().toUpperCase(),
+    airline: $("#editAirline").val().trim(),
+    aircraft: $("#editAircraftType").val(),
+    origin: $("#editOrigin").val().trim().toUpperCase(),
+    destination: $("#editDestination").val().trim().toUpperCase(),
     departureTime: $("#editDepartureTime").val(),
     arrivalTime: $("#editArrivalTime").val(),
-    gate: $("#editGate").val().trim(),
-    capacity: {
-      economy: parseInt($("#editCapacity").val()),
-      business: 20,
-    },
-    price: {
-      economy: 200,
-      business: 600,
-    },
-    aircraft: $("#editAircraftType").val().trim(),
+    gate: $("#editGate").val(),
     status: $("#editStatus").val(),
+    price: {
+      first: parseFloat($("#editFirstPrice").val()) || 0,
+      business: parseFloat($("#editBusinessPrice").val()),
+      economy: parseFloat($("#editEconomyPrice").val()),
+    },
   };
 
   // Validate
@@ -373,7 +652,6 @@ function updateFlight() {
     return;
   }
 
-  // AJAX request
   $.ajax({
     url: `${API_URL}/flights/${flightId}`,
     method: "PUT",
@@ -383,13 +661,8 @@ function updateFlight() {
     },
     data: JSON.stringify(flightData),
     success: function (response) {
-      // Close modal
       $("#editFlightModal").modal("hide");
-
-      // Show success message
       showSuccess("Flight updated successfully!");
-
-      // Reload flights
       loadFlights();
     },
     error: function (xhr) {
@@ -423,14 +696,9 @@ function deleteFlight(flightId) {
       Authorization: `Bearer ${getAuthToken()}`,
     },
     success: function (response) {
-      // Animate row removal
       $(`tr[data-flight-id="${flightId}"]`).fadeOut(400, function () {
         $(this).remove();
-
-        // Show success message
         showSuccess("Flight deleted successfully!");
-
-        // Reload flights to update pagination
         loadFlights();
       });
     },
@@ -467,21 +735,16 @@ function updateStatus() {
     },
     data: JSON.stringify({ status: newStatus }),
     success: function (response) {
-      // Close modal
       $("#statusModal").modal("hide");
-
-      // Update the status badge in the table using DOM manipulation
       const row = $(`tr[data-flight-id="${flightId}"]`);
-      const statusCell = row.find("td:nth-child(7)");
+      const statusCell = row.find("td:nth-child(8)");
       statusCell.html(getStatusBadge(newStatus));
 
-      // Add highlight animation
       row.addClass("table-success");
       setTimeout(function () {
         row.removeClass("table-success");
       }, 2000);
 
-      // Show success message
       showSuccess("Flight status updated!");
     },
     error: function (xhr) {
@@ -499,7 +762,7 @@ function updateStatus() {
 function validateFlightData(data) {
   if (
     !data.flightNumber ||
-    !data.airline ||
+    !data.aircraft ||
     !data.origin ||
     !data.destination ||
     !data.departureTime ||
@@ -510,12 +773,6 @@ function validateFlightData(data) {
     return false;
   }
 
-  if (data.capacity && data.capacity.economy < 1) {
-    showError("Capacity must be at least 1");
-    return false;
-  }
-
-  // Check if arrival is after departure
   const departure = new Date(data.departureTime);
   const arrival = new Date(data.arrivalTime);
 

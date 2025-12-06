@@ -420,6 +420,12 @@
           >
             <i class="fas fa-door-open"></i> Gates
           </button>
+          <button
+            class="btn btn-nav"
+            onclick="window.location.href='analytics.html'"
+          >
+            <i class="fas fa-chart-line"></i> Analytics
+          </button>
           <button class="btn btn-logout" onclick="logout()">
             <i class="fas fa-sign-out-alt"></i> Logout
           </button>
@@ -494,6 +500,7 @@
             <thead>
               <tr>
                 <th>Flight Number</th>
+                <th>Aircraft</th>
                 <th>Origin</th>
                 <th>Destination</th>
                 <th>Departure</th>
@@ -504,9 +511,8 @@
               </tr>
             </thead>
             <tbody id="flightsTableBody">
-              <!-- Flights will be loaded here via AJAX -->
               <tr>
-                <td colspan="8" class="loading-spinner">
+                <td colspan="9" class="loading-spinner">
                   <div class="spinner-border text-primary" role="status">
                     <span class="visually-hidden">Loading...</span>
                   </div>
@@ -556,19 +562,86 @@
                     type="text"
                     class="form-control"
                     id="flightNumber"
+                    placeholder="e.g., AA123"
                     required
                   />
                 </div>
                 <div class="col-md-6 mb-3">
-                  <label class="form-label">Aircraft Type</label>
+                  <label class="form-label">Airline</label>
                   <input
                     type="text"
                     class="form-control"
-                    id="aircraftType"
+                    id="airline"
+                    placeholder="e.g., American Airlines"
                     required
                   />
                 </div>
               </div>
+
+              <div class="row">
+                <div class="col-md-12 mb-3">
+                  <label class="form-label">Aircraft Type</label>
+                  <select class="form-select" id="aircraftType" required>
+                    <option value="">Select aircraft type...</option>
+                  </select>
+                  <small class="text-muted" id="aircraftInfo"></small>
+                </div>
+              </div>
+
+              <!-- Auto-filled capacity display -->
+              <div class="row" id="capacityDisplay" style="display: none">
+                <div class="col-md-12 mb-3">
+                  <div class="alert alert-info">
+                    <strong>Seating Configuration:</strong>
+                    <ul class="mb-0 mt-2">
+                      <li id="firstCapacityInfo" style="display: none"></li>
+                      <li id="businessCapacityInfo"></li>
+                      <li id="economyCapacityInfo"></li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Price customization (optional) -->
+              <div class="row" id="priceSection" style="display: none">
+                <div class="col-md-12 mb-2">
+                  <label class="form-label fw-bold"
+                    >Ticket Prices (Optional - defaults shown)</label
+                  >
+                </div>
+                <div
+                  class="col-md-4 mb-3"
+                  id="firstPriceDiv"
+                  style="display: none"
+                >
+                  <label class="form-label">First Class Price ($)</label>
+                  <input
+                    type="number"
+                    class="form-control"
+                    id="firstPrice"
+                    placeholder="Auto"
+                  />
+                </div>
+                <div class="col-md-4 mb-3">
+                  <label class="form-label">Business Price ($)</label>
+                  <input
+                    type="number"
+                    class="form-control"
+                    id="businessPrice"
+                    placeholder="Auto"
+                  />
+                </div>
+                <div class="col-md-4 mb-3">
+                  <label class="form-label">Economy Price ($)</label>
+                  <input
+                    type="number"
+                    class="form-control"
+                    id="economyPrice"
+                    placeholder="Auto"
+                  />
+                </div>
+              </div>
+
               <div class="row">
                 <div class="col-md-6 mb-3">
                   <label class="form-label">Origin</label>
@@ -576,6 +649,7 @@
                     type="text"
                     class="form-control"
                     id="origin"
+                    placeholder="e.g., JFK"
                     required
                   />
                 </div>
@@ -585,6 +659,7 @@
                     type="text"
                     class="form-control"
                     id="destination"
+                    placeholder="e.g., LAX"
                     required
                   />
                 </div>
@@ -610,21 +685,17 @@
                 </div>
               </div>
               <div class="row">
-                <div class="col-md-4 mb-3">
-                  <label class="form-label">Gate</label>
-                  <input type="text" class="form-control" id="gate" required />
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Gate Assignment</label>
+                  <select class="form-select" id="gate" required>
+                    <option value="">Select gate...</option>
+                  </select>
+                  <small class="text-muted" id="gateInfo">
+                    <i class="fas fa-info-circle"></i> Select aircraft type and
+                    departure time first
+                  </small>
                 </div>
-                <div class="col-md-4 mb-3">
-                  <label class="form-label">Capacity</label>
-                  <input
-                    type="number"
-                    class="form-control"
-                    id="capacity"
-                    min="1"
-                    required
-                  />
-                </div>
-                <div class="col-md-4 mb-3">
+                <div class="col-md-6 mb-3">
                   <label class="form-label">Status</label>
                   <select class="form-select" id="status">
                     <option value="scheduled">Scheduled</option>
@@ -679,15 +750,26 @@
                   />
                 </div>
                 <div class="col-md-6 mb-3">
-                  <label class="form-label">Aircraft Type</label>
+                  <label class="form-label">Airline</label>
                   <input
                     type="text"
                     class="form-control"
-                    id="editAircraftType"
+                    id="editAirline"
                     required
                   />
                 </div>
               </div>
+
+              <div class="row">
+                <div class="col-md-12 mb-3">
+                  <label class="form-label">Aircraft Type</label>
+                  <select class="form-select" id="editAircraftType" required>
+                    <option value="">Select aircraft type...</option>
+                  </select>
+                  <small class="text-muted" id="editAircraftInfo"></small>
+                </div>
+              </div>
+
               <div class="row">
                 <div class="col-md-6 mb-3">
                   <label class="form-label">Origin</label>
@@ -729,84 +811,17 @@
                 </div>
               </div>
               <div class="row">
-                <div class="col-md-4 mb-3">
-                  <label class="form-label">Gate</label>
-                  <input
-                    type="text"
-                    class="form-control"
-                    id="editGate"
-                    required
-                  />
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Gate Assignment</label>
+                  <select class="form-select" id="editGate" required>
+                    <option value="">Select gate...</option>
+                  </select>
+                  <small class="text-muted" id="editGateInfo">
+                    <i class="fas fa-info-circle"></i> Select aircraft type and
+                    departure time
+                  </small>
                 </div>
-                <div class="row">
-                  <div class="col-md-12 mb-3">
-                    <h6 class="fw-bold">Capacity</h6>
-                  </div>
-                  <div class="col-md-4 mb-3">
-                    <label class="form-label">Economy Seats</label>
-                    <input
-                      type="number"
-                      class="form-control"
-                      id="economyCapacity"
-                      value="150"
-                      required
-                    />
-                  </div>
-                  <div class="col-md-4 mb-3">
-                    <label class="form-label">Business Seats</label>
-                    <input
-                      type="number"
-                      class="form-control"
-                      id="businessCapacity"
-                      value="20"
-                      required
-                    />
-                  </div>
-                  <div class="col-md-4 mb-3">
-                    <label class="form-label">First Class Seats</label>
-                    <input
-                      type="number"
-                      class="form-control"
-                      id="firstCapacity"
-                      value="8"
-                      required
-                    />
-                  </div>
-                </div>
-                <div class="row">
-                  <div class="col-md-12 mb-3">
-                    <h6 class="fw-bold">Pricing</h6>
-                  </div>
-                  <div class="col-md-4 mb-3">
-                    <label class="form-label">Economy Price ($)</label>
-                    <input
-                      type="number"
-                      class="form-control"
-                      id="economyPrice"
-                      required
-                    />
-                  </div>
-                  <div class="col-md-4 mb-3">
-                    <label class="form-label">Business Price ($)</label>
-                    <input
-                      type="number"
-                      class="form-control"
-                      id="businessPrice"
-                      required
-                    />
-                  </div>
-                  <div class="col-md-4 mb-3">
-                    <label class="form-label">First Class Price ($)</label>
-                    <input
-                      type="number"
-                      class="form-control"
-                      id="firstPrice"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div class="col-md-4 mb-3">
+                <div class="col-md-6 mb-3">
                   <label class="form-label">Status</label>
                   <select class="form-select" id="editStatus">
                     <option value="scheduled">Scheduled</option>
@@ -815,6 +830,39 @@
                     <option value="delayed">Delayed</option>
                     <option value="cancelled">Cancelled</option>
                   </select>
+                </div>
+              </div>
+
+              <!-- Price editing -->
+              <div class="row">
+                <div class="col-md-12 mb-2">
+                  <label class="form-label fw-bold">Ticket Prices</label>
+                </div>
+                <div class="col-md-4 mb-3" id="editFirstPriceDiv">
+                  <label class="form-label">First Class Price ($)</label>
+                  <input
+                    type="number"
+                    class="form-control"
+                    id="editFirstPrice"
+                  />
+                </div>
+                <div class="col-md-4 mb-3">
+                  <label class="form-label">Business Price ($)</label>
+                  <input
+                    type="number"
+                    class="form-control"
+                    id="editBusinessPrice"
+                    required
+                  />
+                </div>
+                <div class="col-md-4 mb-3">
+                  <label class="form-label">Economy Price ($)</label>
+                  <input
+                    type="number"
+                    class="form-control"
+                    id="editEconomyPrice"
+                    required
+                  />
                 </div>
               </div>
             </form>
