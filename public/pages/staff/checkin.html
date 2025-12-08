@@ -3,33 +3,663 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Check-in - Airport Management</title>
+    <title>Check-in System - AeroFlow</title>
     <link
       href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
       rel="stylesheet"
     />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          sans-serif;
+        background: #f0f4f8;
+        min-height: 100vh;
+      }
+
+      /* Navbar */
+      .navbar {
+        background: #1e3a8a;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        padding: 15px 0;
+      }
+
+      .navbar-brand {
+        color: white;
+        font-size: 28px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .navbar-brand:hover {
+        color: white;
+      }
+
+      .navbar-brand i {
+        font-size: 32px;
+      }
+
+      .user-info {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+      }
+
+      .user-name {
+        color: white;
+        font-weight: 600;
+        font-size: 16px;
+      }
+
+      .user-role {
+        background: #3b82f6;
+        color: white;
+        padding: 5px 15px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+      }
+
+      .btn-logout {
+        background: #dc2626;
+        color: white;
+        border: none;
+        padding: 8px 20px;
+        border-radius: 6px;
+        font-weight: 600;
+        transition: all 0.3s;
+      }
+
+      .btn-logout:hover {
+        background: #b91c1c;
+      }
+
+      /* Main Container */
+      .dashboard-container {
+        max-width: 1600px;
+        margin: 30px auto;
+        padding: 0 20px;
+      }
+
+      /* Sidebar */
+      .sidebar {
+        background: white;
+        border-radius: 12px;
+        padding: 25px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        position: sticky;
+        top: 100px;
+      }
+
+      .sidebar h5 {
+        color: #1e3a8a;
+        font-weight: 700;
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 2px solid #e2e8f0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .nav-link {
+        color: #475569;
+        padding: 12px 15px;
+        border-radius: 8px;
+        margin-bottom: 8px;
+        font-weight: 600;
+        transition: all 0.3s;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .nav-link i {
+        font-size: 18px;
+        width: 25px;
+      }
+
+      .nav-link:hover {
+        background: #eff6ff;
+        color: #1e3a8a;
+        transform: translateX(5px);
+      }
+
+      .nav-link.active {
+        background: #1e3a8a;
+        color: white;
+      }
+
+      /* Page Header */
+      .page-header {
+        background: white;
+        border-radius: 12px;
+        padding: 25px 30px;
+        margin-bottom: 30px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        border-left: 4px solid #1e3a8a;
+      }
+
+      .page-header h1 {
+        color: #1e3a8a;
+        font-weight: 700;
+        margin-bottom: 5px;
+      }
+
+      .page-header p {
+        color: #64748b;
+        margin: 0;
+      }
+
+      /* Main Content */
+      .main-content {
+        background: white;
+        border-radius: 12px;
+        padding: 30px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      }
+
+      /* Statistics Cards */
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+      }
+
+      .stat-card {
+        background: white;
+        border-radius: 10px;
+        padding: 25px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        border-top: 3px solid;
+        transition: all 0.3s;
+        text-align: center;
+      }
+
+      .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+      }
+
+      .stat-card.primary {
+        border-top-color: #3b82f6;
+      }
+      .stat-card.success {
+        border-top-color: #10b981;
+      }
+      .stat-card.warning {
+        border-top-color: #f59e0b;
+      }
+      .stat-card.danger {
+        border-top-color: #ef4444;
+      }
+
+      .stat-icon {
+        font-size: 40px;
+        margin-bottom: 15px;
+      }
+
+      .stat-card.primary .stat-icon {
+        color: #3b82f6;
+      }
+      .stat-card.success .stat-icon {
+        color: #10b981;
+      }
+      .stat-card.warning .stat-icon {
+        color: #f59e0b;
+      }
+      .stat-card.danger .stat-icon {
+        color: #ef4444;
+      }
+
+      .stat-label {
+        color: #64748b;
+        font-size: 14px;
+        font-weight: 600;
+        text-transform: uppercase;
+        margin-bottom: 8px;
+      }
+
+      .stat-value {
+        font-size: 36px;
+        font-weight: 700;
+        color: #1e293b;
+      }
+
+      /* Search Section */
+      .search-section {
+        background: #f8fafc;
+        border-radius: 10px;
+        padding: 25px;
+        margin-bottom: 30px;
+        border: 2px solid #e2e8f0;
+      }
+
+      .search-section h4 {
+        color: #1e3a8a;
+        font-weight: 700;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .form-label {
+        font-weight: 600;
+        color: #475569;
+        margin-bottom: 8px;
+      }
+
+      .form-control {
+        border: 2px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 12px;
+        font-size: 15px;
+        transition: all 0.3s;
+      }
+
+      .form-control:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        outline: none;
+      }
+
+      /* Booking Results */
+      .booking-item {
+        background: #f8fafc;
+        border: 2px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 25px;
+        margin-bottom: 20px;
+        transition: all 0.3s;
+      }
+
+      .booking-item:hover {
+        border-color: #3b82f6;
+        box-shadow: 0 4px 15px rgba(59, 130, 246, 0.1);
+      }
+
+      .booking-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 2px solid #e2e8f0;
+      }
+
+      .booking-reference {
+        font-size: 20px;
+        font-weight: 700;
+        color: #1e3a8a;
+      }
+
+      .status-badge {
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 14px;
+      }
+
+      .status-confirmed {
+        background: #dbeafe;
+        color: #1e40af;
+      }
+
+      .status-checked-in {
+        background: #dcfce7;
+        color: #166534;
+      }
+
+      .status-boarded {
+        background: #f3e8ff;
+        color: #6b21a8;
+      }
+
+      .booking-details {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        margin-bottom: 20px;
+      }
+
+      .detail-item {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .detail-label {
+        font-size: 12px;
+        color: #64748b;
+        font-weight: 600;
+        text-transform: uppercase;
+        margin-bottom: 5px;
+      }
+
+      .detail-value {
+        font-size: 16px;
+        color: #1e293b;
+        font-weight: 600;
+      }
+
+      .flight-info {
+        background: #eff6ff;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 20px;
+      }
+
+      .flight-route {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 15px;
+        font-size: 18px;
+        font-weight: 700;
+        color: #1e3a8a;
+        margin-bottom: 10px;
+      }
+
+      .flight-details-row {
+        display: flex;
+        justify-content: space-around;
+        font-size: 14px;
+        color: #475569;
+      }
+
+      /* Action Buttons */
+      .action-buttons {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .btn-checkin {
+        background: #3b82f6;
+        border: none;
+        color: white;
+        padding: 12px 24px;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+      }
+
+      .btn-checkin:hover {
+        background: #2563eb;
+        transform: translateY(-3px);
+        box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+      }
+
+      .btn-checkin:disabled {
+        background: #94a3b8;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      .btn-view {
+        background: white;
+        border: 2px solid #3b82f6;
+        color: #3b82f6;
+        padding: 12px 24px;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+      }
+
+      .btn-view:hover {
+        background: #eff6ff;
+      }
+
+      .btn-boarding {
+        background: #10b981;
+        border: none;
+        color: white;
+        padding: 12px 24px;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+      }
+
+      .btn-boarding:hover {
+        background: #059669;
+        transform: translateY(-3px);
+        box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+      }
+
+      /* Empty State */
+      .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: #64748b;
+      }
+
+      .empty-state i {
+        font-size: 80px;
+        color: #cbd5e1;
+        margin-bottom: 20px;
+      }
+
+      .empty-state h3 {
+        color: #475569;
+        font-weight: 600;
+        margin-bottom: 10px;
+      }
+
+      /* Loading */
+      .loading {
+        text-align: center;
+        padding: 40px;
+        display: none;
+      }
+
+      .loading.show {
+        display: block;
+      }
+
+      .spinner {
+        border: 4px solid #e2e8f0;
+        border-top: 4px solid #3b82f6;
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 20px;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      /* Alert */
+      .alert-container {
+        position: fixed;
+        top: 80px;
+        right: 20px;
+        z-index: 1000;
+        max-width: 400px;
+      }
+
+      /* Responsive */
+      @media (max-width: 768px) {
+        .sidebar {
+          position: relative;
+          top: 0;
+          margin-bottom: 20px;
+        }
+
+        .booking-header {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 10px;
+        }
+
+        .action-buttons {
+          width: 100%;
+        }
+
+        .action-buttons button {
+          flex: 1;
+        }
+      }
+    </style>
   </head>
   <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <!-- Navbar -->
+    <nav class="navbar sticky-top">
       <div class="container-fluid">
-        <a class="navbar-brand" href="#">Airport Management</a>
-        <ul class="navbar-nav ms-auto">
-          <li class="nav-item">
-            <span class="navbar-text text-white me-3" id="userInfo"></span>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="#" onclick="logout()">Logout</a>
-          </li>
-        </ul>
+        <a class="navbar-brand" href="#">
+          <i class="fas fa-clipboard-check"></i>
+          AeroFlow Staff
+        </a>
+        <div class="user-info">
+          <span class="user-name" id="userName">Loading...</span>
+          <span class="user-role">Staff</span>
+          <button class="btn btn-logout" onclick="logout()">
+            <i class="fas fa-sign-out-alt"></i> Logout
+          </button>
+        </div>
       </div>
     </nav>
 
-    <div class="container mt-5">
-      <h2>Check-in System</h2>
-      <p>Coming soon - Staff check-in interface</p>
+    <!-- Alert Container -->
+    <div id="alert-container" class="alert-container"></div>
+
+    <!-- Dashboard Container -->
+    <div class="dashboard-container">
+      <div class="row">
+        <!-- Sidebar -->
+        <div class="col-md-3">
+          <div class="sidebar">
+            <h5><i class="fas fa-bars"></i> Navigation</h5>
+            <nav class="nav flex-column">
+              <a class="nav-link active" href="checkin.html">
+                <i class="fas fa-clipboard-check"></i>
+                Check-in
+              </a>
+              <a class="nav-link" href="boarding.html">
+                <i class="fas fa-plane-arrival"></i>
+                Boarding
+              </a>
+              <a class="nav-link" href="/pages/admin/dashboard.html">
+                <i class="fas fa-tachometer-alt"></i>
+                Dashboard
+              </a>
+            </nav>
+          </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-md-9">
+          <div class="page-header">
+            <h1>
+              <i class="fas fa-clipboard-check"></i> Passenger Check-in System
+            </h1>
+            <p>Search for passengers by booking reference or passport number</p>
+          </div>
+
+          <!-- Quick Stats -->
+          <div class="stats-grid" id="quickStats">
+            <div class="stat-card primary">
+              <i class="fas fa-ticket-alt stat-icon"></i>
+              <div class="stat-label">Total Bookings</div>
+              <div class="stat-value" id="totalBookings">0</div>
+            </div>
+            <div class="stat-card success">
+              <i class="fas fa-check-circle stat-icon"></i>
+              <div class="stat-label">Checked In</div>
+              <div class="stat-value" id="checkedInCount">0</div>
+            </div>
+            <div class="stat-card warning">
+              <i class="fas fa-plane-departure stat-icon"></i>
+              <div class="stat-label">Boarded</div>
+              <div class="stat-value" id="boardedCount">0</div>
+            </div>
+            <div class="stat-card danger">
+              <i class="fas fa-clock stat-icon"></i>
+              <div class="stat-label">Pending</div>
+              <div class="stat-value" id="pendingCount">0</div>
+            </div>
+          </div>
+
+          <!-- Search Section -->
+          <div class="main-content">
+            <div class="search-section">
+              <h4><i class="fas fa-search"></i> Search Passenger</h4>
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Booking Reference</label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="bookingRefInput"
+                    placeholder="Enter booking reference (e.g., ABC123)"
+                  />
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Passport Number</label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="passportInput"
+                    placeholder="Enter passport number"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- Loading State -->
+            <div class="loading" id="loadingSpinner">
+              <div class="spinner"></div>
+              <p>Searching...</p>
+            </div>
+
+            <!-- Results -->
+            <div id="resultsContainer" style="display: none">
+              <h4 style="color: #1e3a8a; font-weight: 700; margin-bottom: 20px">
+                <i class="fas fa-list"></i> Search Results
+              </h4>
+              <div id="bookingsList"></div>
+            </div>
+
+            <!-- Empty State -->
+            <div id="emptyState">
+              <div class="empty-state">
+                <i class="fas fa-search"></i>
+                <h3>Search for Passengers</h3>
+                <p>
+                  Enter a booking reference or passport number above to find
+                  passengers
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/js/config.js"></script>
     <script>
       $(document).ready(function () {
@@ -37,9 +667,322 @@
           window.location.href = "/pages/auth/login.html";
           return;
         }
+
         const user = getUser();
-        $("#userInfo").text(`${user.name} (${user.role})`);
+        $("#userName").text(user.name);
+
+        loadStats();
+
+        let searchTimeout;
+        $("#bookingRefInput, #passportInput").on("input", function () {
+          clearTimeout(searchTimeout);
+          searchTimeout = setTimeout(() => {
+            performSearch();
+          }, 500);
+        });
       });
+
+      function loadStats() {
+        $.ajax({
+          url: `${API_URL}/bookings`,
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          success: function (response) {
+            const bookings = response.bookings || response.data || [];
+
+            const scheduledBookings = bookings.filter((booking) => {
+              const flight = booking.flight || booking.flightId;
+              return flight && flight.status === "scheduled";
+            });
+
+            const totalBookings = scheduledBookings.length;
+            const checkedIn = scheduledBookings.filter(
+              (b) => b.status === "checked-in"
+            ).length;
+            const boarded = scheduledBookings.filter(
+              (b) => b.status === "boarded"
+            ).length;
+            const pending = scheduledBookings.filter(
+              (b) => b.status === "confirmed"
+            ).length;
+
+            $("#totalBookings").text(totalBookings);
+            $("#checkedInCount").text(checkedIn);
+            $("#boardedCount").text(boarded);
+            $("#pendingCount").text(pending);
+          },
+          error: function (xhr) {
+            console.error("Error loading stats:", xhr);
+          },
+        });
+      }
+
+      function performSearch() {
+        const bookingRef = $("#bookingRefInput").val().trim().toUpperCase();
+        const passport = $("#passportInput").val().trim().toUpperCase();
+
+        if (!bookingRef && !passport) {
+          $("#emptyState").show();
+          $("#resultsContainer").hide();
+          $("#loadingSpinner").removeClass("show");
+          return;
+        }
+
+        $("#loadingSpinner").addClass("show");
+        $("#emptyState").hide();
+        $("#resultsContainer").hide();
+
+        let foundBookings = [];
+        let searchesCompleted = 0;
+        const totalSearches = bookingRef && passport ? 2 : 1;
+
+        if (bookingRef) {
+          $.ajax({
+            url: `${API_URL}/bookings/reference/${bookingRef}`,
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+            success: function (response) {
+              const booking = response.data || response.booking;
+              const flight = booking.flight || booking.flightId;
+              if (flight && flight.status === "scheduled") {
+                foundBookings.push(booking);
+              }
+              searchesCompleted++;
+              if (searchesCompleted === totalSearches) {
+                displayResults(foundBookings);
+              }
+            },
+            error: function (xhr) {
+              searchesCompleted++;
+              if (searchesCompleted === totalSearches) {
+                displayResults(foundBookings);
+              }
+            },
+          });
+        }
+
+        if (passport) {
+          $.ajax({
+            url: `${API_URL}/bookings/passport/${passport}`,
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+            success: function (response) {
+              const bookings = response.data || response.bookings || [];
+              const scheduledBookings = bookings.filter((booking) => {
+                const flight = booking.flight || booking.flightId;
+                return flight && flight.status === "scheduled";
+              });
+              foundBookings = [...foundBookings, ...scheduledBookings];
+              searchesCompleted++;
+              if (searchesCompleted === totalSearches) {
+                displayResults(foundBookings);
+              }
+            },
+            error: function (xhr) {
+              searchesCompleted++;
+              if (searchesCompleted === totalSearches) {
+                displayResults(foundBookings);
+              }
+            },
+          });
+        }
+      }
+
+      function displayResults(bookings) {
+        $("#loadingSpinner").removeClass("show");
+
+        const uniqueBookings = bookings.filter(
+          (booking, index, self) =>
+            index === self.findIndex((b) => b._id === booking._id)
+        );
+
+        if (!uniqueBookings || uniqueBookings.length === 0) {
+          $("#emptyState").show();
+          $("#resultsContainer").hide();
+          return;
+        }
+
+        $("#emptyState").hide();
+        $("#resultsContainer").show();
+
+        const bookingsList = $("#bookingsList");
+        bookingsList.empty();
+
+        uniqueBookings.forEach((booking) => {
+          const statusClass =
+            booking.status === "boarded"
+              ? "status-boarded"
+              : booking.status === "checked-in"
+              ? "status-checked-in"
+              : "status-confirmed";
+
+          const statusText =
+            booking.status === "boarded"
+              ? "Boarded"
+              : booking.status === "checked-in"
+              ? "Checked In"
+              : "Pending Check-in";
+
+          const flight = booking.flight || booking.flightId || {};
+          const passenger = booking.passenger || booking.passengerId || {};
+
+          const bookingHtml = `
+      <div class="booking-item">
+        <div class="booking-header">
+          <div class="booking-reference">
+            <i class="fas fa-ticket-alt"></i> ${booking.bookingReference}
+          </div>
+          <span class="status-badge ${statusClass}">${statusText}</span>
+        </div>
+        <div class="flight-info">
+          <div class="flight-route">
+            <span>${flight.origin || "N/A"}</span>
+            <i class="fas fa-plane"></i>
+            <span>${flight.destination || "N/A"}</span>
+          </div>
+          <div class="flight-details-row">
+            <span><i class="fas fa-plane-departure"></i> ${
+              flight.flightNumber || "N/A"
+            }</span>
+            <span><i class="fas fa-calendar"></i> ${
+              flight.departureTime
+                ? new Date(flight.departureTime).toLocaleDateString()
+                : "N/A"
+            }</span>
+            <span><i class="fas fa-clock"></i> ${
+              flight.departureTime
+                ? new Date(flight.departureTime).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })
+                : "N/A"
+            }</span>
+          </div>
+        </div>
+        <div class="booking-details">
+          <div class="detail-item">
+            <span class="detail-label">Passenger Name</span>
+            <span class="detail-value">${passenger.name || "N/A"}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Passport Number</span>
+            <span class="detail-value">${
+              passenger.passportNumber || "N/A"
+            }</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Seat</span>
+            <span class="detail-value">${
+              booking.seatNumber || "Not Assigned"
+            }</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Class</span>
+            <span class="detail-value">${(
+              booking.class || "economy"
+            ).toUpperCase()}</span>
+          </div>
+        </div>
+        <div class="action-buttons">
+          ${
+            booking.status === "confirmed"
+              ? `<button class="btn-checkin" onclick="checkInPassenger('${booking._id}')">
+                   <i class="fas fa-check"></i> Check In
+                 </button>`
+              : booking.status === "checked-in"
+              ? `<button class="btn-checkin" disabled>
+                   <i class="fas fa-check-circle"></i> Already Checked In
+                 </button>
+                 <button class="btn-boarding" onclick="addToBoardingQueue('${booking._id}')">
+                   <i class="fas fa-plane-arrival"></i> Add to Boarding Queue
+                 </button>`
+              : `<button class="btn-checkin" disabled>
+                   <i class="fas fa-check-double"></i> Boarded
+                 </button>`
+          }
+          <button class="btn-view" onclick="viewDetails('${booking._id}')">
+            <i class="fas fa-eye"></i> View Details
+          </button>
+        </div>
+      </div>
+    `;
+          bookingsList.append(bookingHtml);
+        });
+      }
+
+      function checkInPassenger(bookingId) {
+        if (!confirm("Confirm check-in for this passenger?")) return;
+
+        $.ajax({
+          url: `${API_URL}/bookings/${bookingId}/checkin`,
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          success: function () {
+            showAlert("success", "Passenger checked in successfully!");
+            performSearch();
+            loadStats();
+          },
+          error: function (xhr) {
+            showAlert("danger", xhr.responseJSON?.error || "Check-in failed");
+          },
+        });
+      }
+
+      function addToBoardingQueue(bookingId) {
+        if (!confirm("Add this passenger to the boarding queue?")) return;
+
+        $.ajax({
+          url: `${API_URL}/boarding/queue`,
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            "Content-Type": "application/json",
+          },
+          data: JSON.stringify({ bookingId: bookingId }),
+          success: function () {
+            showAlert("success", "Passenger added to boarding queue!");
+            performSearch();
+          },
+          error: function (xhr) {
+            showAlert(
+              "danger",
+              "Failed to add to boarding queue: " +
+                (xhr.responseJSON?.error || "Unknown error")
+            );
+            console.error("Boarding queue error:", xhr);
+          },
+        });
+      }
+
+      function viewDetails(bookingId) {
+        window.location.href = `/pages/public/booking-details.html?id=${bookingId}`;
+      }
+
+      function showAlert(type, message) {
+        const alertHtml = `
+    <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+      ${message}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+  `;
+        $("#alert-container").html(alertHtml);
+        setTimeout(() => $(".alert").alert("close"), 5000);
+      }
+
+      function logout() {
+        if (confirm("Are you sure you want to logout?")) {
+          localStorage.clear();
+          window.location.href = "/pages/auth/login.html";
+        }
+      }
     </script>
   </body>
 </html>

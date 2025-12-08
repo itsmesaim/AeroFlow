@@ -3,7 +3,7 @@ $(document).ready(function () {
   if (isLoggedIn()) {
     const user = getUser();
     redirectToDashboard(user.role);
-    return; // Stop here if already logged in
+    return;
   }
 
   // Register Form Submit
@@ -14,7 +14,16 @@ $(document).ready(function () {
       name: $("#name").val().trim(),
       email: $("#email").val().trim(),
       password: $("#password").val(),
-      role: $("#role").val(),
+      role: $('input[name="role"]:checked').val(), // ← FIXED: Get selected radio value
+      phone: $("#phone").val().trim(),
+      passportNumber: $("#passportNumber").val().trim(),
+      dateOfBirth: $("#dateOfBirth").val(),
+      nationality: $("#nationality").val().trim(),
+      address: {
+        street: $("#street").val().trim(),
+        city: $("#city").val().trim(),
+        country: $("#country").val().trim(),
+      },
     };
 
     // Show loading
@@ -45,9 +54,10 @@ $(document).ready(function () {
       },
       error: function (xhr) {
         toggleLoading("#registerBtn", false);
-        const error = xhr.responseJSON
-          ? xhr.responseJSON.message
-          : "Registration failed";
+        const error =
+          xhr.responseJSON?.error ||
+          xhr.responseJSON?.message ||
+          "Registration failed";
         showAlert("danger", error);
       },
     });
@@ -88,7 +98,7 @@ $(document).ready(function () {
             const intendedPage = localStorage.getItem("intendedPage");
             if (intendedPage === "booking") {
               localStorage.removeItem("intendedPage");
-              window.location.href = "../public/booking.html";
+              window.location.href = "/pages/passenger/booking.html";
             } else {
               redirectToDashboard(response.user.role);
             }
@@ -97,9 +107,10 @@ $(document).ready(function () {
       },
       error: function (xhr) {
         toggleLoading("#loginBtn", false);
-        const error = xhr.responseJSON
-          ? xhr.responseJSON.message
-          : "Login failed";
+        const error =
+          xhr.responseJSON?.error ||
+          xhr.responseJSON?.message ||
+          "Login failed";
         showAlert("danger", error);
       },
     });
@@ -109,11 +120,14 @@ $(document).ready(function () {
 // Helper: Show alert messages
 function showAlert(type, message) {
   const alertHtml = `
-        <div class="alert alert-${type} alert-dismissible fade show" role="alert">
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    `;
+    <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+      <i class="fas fa-${
+        type === "success" ? "check-circle" : "exclamation-circle"
+      }"></i>
+      ${message}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+  `;
   $("#alert-container").html(alertHtml);
 
   // Auto dismiss after 5 seconds
@@ -141,20 +155,19 @@ function toggleLoading(btnSelector, isLoading) {
 
 // Helper: Redirect to appropriate dashboard
 function redirectToDashboard(role) {
+  console.log("Redirecting to dashboard for role:", role); // Debug log
+
   switch (role) {
     case "admin":
       window.location.href = "/pages/admin/dashboard.html";
       break;
-    case "agent":
-      window.location.href = "/pages/staff/boarding.html";
-      break;
     case "staff":
-      window.location.href = "/pages/staff/checkin.html";
+      window.location.href = "/pages/staff/checkin.html"; // Staff manage flights
       break;
     case "passenger":
       window.location.href = "/pages/public/flight-search.html";
       break;
     default:
-      window.location.href = "/";
+      window.location.href = "/pages/public/flight-search.html";
   }
 }

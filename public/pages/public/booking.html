@@ -405,6 +405,28 @@
         color: #3b82f6;
       }
 
+      /* Booking Toggle */
+      .booking-toggle {
+        margin-bottom: 20px;
+        padding: 15px;
+        background: #eff6ff;
+        border-radius: 8px;
+        border: 2px solid #3b82f6;
+      }
+
+      .form-check-input {
+        cursor: pointer;
+        width: 50px;
+        height: 25px;
+      }
+
+      .form-check-label {
+        font-weight: 600;
+        color: #1e3a8a;
+        cursor: pointer;
+        margin-left: 10px;
+      }
+
       /* Responsive */
       @media (max-width: 992px) {
         .booking-layout {
@@ -457,6 +479,9 @@
                 <i class="fas fa-user"></i>
                 Passenger Information
               </h4>
+
+              <!-- Book for Someone Else Toggle -->
+              <div id="bookingToggleContainer"></div>
 
               <div class="form-group">
                 <label class="form-label"
@@ -702,7 +727,421 @@
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../../js/config.js"></script>
 
-    <script src="../../js/booking.js"></script>
+    <script>
+      // Configuration
+      let selectedFlight = null;
+      let aircraftConfig = null;
+      let occupiedSeats = [];
+      let selectedSeatNumber = null;
+      let currentPrice = 0;
+      let currentClass = "economy";
+      let currentUser = null;
+      let bookingForSelf = true;
+
+      // Check login
+      function checkLoginForBooking() {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          alert("Please login to book a flight");
+          window.location.href = "../auth/login.html";
+          return false;
+        }
+        return true;
+      }
+
+      // Initialize
+      $(document).ready(function () {
+        if (!checkLoginForBooking()) return;
+
+        loadUserProfile();
+        loadFlightDetails();
+        setupEventListeners();
+      });
+
+      // Load user profile from localStorage (already has all data from login)
+      function loadUserProfile() {
+        const userStr = localStorage.getItem("user");
+
+        if (userStr) {
+          currentUser = JSON.parse(userStr);
+
+          $("#passengerName").val(currentUser.name || "");
+          $("#passengerEmail").val(currentUser.email || "");
+
+          if (currentUser.phone) $("#passengerPhone").val(currentUser.phone);
+          if (currentUser.passportNumber)
+            $("#passportNumber").val(currentUser.passportNumber);
+          if (currentUser.dateOfBirth) {
+            const dob = currentUser.dateOfBirth.split("T")[0];
+            $("#dateOfBirth").val(dob);
+          }
+          if (currentUser.nationality)
+            $("#nationality").val(currentUser.nationality);
+
+          addBookingToggle();
+        }
+      }
+
+      // Add booking toggle
+      function addBookingToggle() {
+        const toggleHtml = `
+          <div class="booking-toggle">
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" id="bookForSomeoneElse">
+              <label class="form-check-label" for="bookForSomeoneElse">
+                <i class="fas fa-user-friends"></i> Book for someone else
+              </label>
+            </div>
+            <small style="color: #64748b; display: block; margin-top: 8px; margin-left: 60px;">
+              Toggle this if you're booking on behalf of another passenger
+            </small>
+          </div>
+        `;
+
+        $("#bookingToggleContainer").html(toggleHtml);
+
+        $("#bookForSomeoneElse").on("change", function () {
+          bookingForSelf = !$(this).is(":checked");
+
+          if (bookingForSelf) {
+            loadUserProfile();
+            $(
+              "#passengerName, #passengerEmail, #passengerPhone, #passportNumber, #dateOfBirth, #nationality"
+            )
+              .prop("readonly", true)
+              .css({
+                "background-color": "#f8fafc",
+                "border-color": "#cbd5e1",
+              });
+          } else {
+            $(
+              "#passengerName, #passengerEmail, #passengerPhone, #passportNumber, #dateOfBirth, #nationality"
+            )
+              .val("")
+              .prop("readonly", false)
+              .css({ "background-color": "white", "border-color": "#e2e8f0" });
+          }
+        });
+
+        $(
+          "#passengerName, #passengerEmail, #passengerPhone, #passportNumber, #dateOfBirth, #nationality"
+        )
+          .prop("readonly", true)
+          .css({ "background-color": "#f8fafc", "border-color": "#cbd5e1" });
+      }
+
+      function setupEventListeners() {
+        $('input[name="class"]').on("change", function () {
+          currentClass = $(this).val();
+          updateClassSelection();
+          updatePrice();
+          generateSeats(currentClass);
+        });
+
+        $("#bookingForm").on("submit", function (e) {
+          e.preventDefault();
+          submitBooking();
+        });
+      }
+
+      function loadFlightDetails() {
+        const flightData = localStorage.getItem("selectedFlight");
+        if (!flightData) {
+          alert("No flight selected");
+          window.location.href = "flight-search.html";
+          return;
+        }
+
+        const flight = JSON.parse(flightData);
+        $.ajax({
+          url: `${API_URL}/flights/${flight.id}`,
+          method: "GET",
+          success: function (response) {
+            selectedFlight = response.flight || response;
+            if (selectedFlight.aircraft) {
+              loadAircraftConfig(selectedFlight.aircraft);
+            } else {
+              displayFlightSummary();
+              loadOccupiedSeats();
+            }
+          },
+        });
+      }
+
+      function loadAircraftConfig(aircraftType) {
+        $.ajax({
+          url: `${API_URL}/aircraft-types/${aircraftType}`,
+          method: "GET",
+          success: function (response) {
+            aircraftConfig = response.aircraft;
+            displayFlightSummary();
+            loadOccupiedSeats();
+          },
+          error: function () {
+            aircraftConfig = null;
+            displayFlightSummary();
+            loadOccupiedSeats();
+          },
+        });
+      }
+
+      function displayFlightSummary() {
+        $("#summaryFlightNumber").text(selectedFlight.flightNumber);
+        $("#summaryOrigin").text(selectedFlight.origin);
+        $("#summaryDestination").text(selectedFlight.destination);
+        $("#summaryDeparture").text(
+          formatDateTime(selectedFlight.departureTime)
+        );
+        $("#summaryArrival").text(formatDateTime(selectedFlight.arrivalTime));
+        $("#summaryGate").text(selectedFlight.gate);
+
+        if (selectedFlight.price) {
+          $("#economyPrice").text("$" + selectedFlight.price.economy);
+          $("#businessPrice").text("$" + selectedFlight.price.business);
+          if (
+            selectedFlight.capacity?.first > 0 &&
+            selectedFlight.price.first
+          ) {
+            $("#firstPrice").text("$" + selectedFlight.price.first);
+            $("#firstOption").show();
+          } else {
+            $("#firstOption").hide();
+          }
+          currentPrice = selectedFlight.price.economy;
+          $("#totalPrice").text("$" + currentPrice);
+        }
+        $("#economyOption").addClass("selected");
+      }
+
+      function updateClassSelection() {
+        $(".class-option").removeClass("selected");
+        const selectedClass = $('input[name="class"]:checked').val();
+        $(`#${selectedClass}Option`).addClass("selected");
+        $("#summaryClass").text(
+          selectedClass === "first"
+            ? "First Class"
+            : selectedClass.charAt(0).toUpperCase() + selectedClass.slice(1)
+        );
+      }
+
+      function updatePrice() {
+        const selectedClass = $('input[name="class"]:checked').val();
+        if (selectedFlight.price[selectedClass]) {
+          currentPrice = selectedFlight.price[selectedClass];
+          $("#totalPrice").text("$" + currentPrice);
+        }
+      }
+
+      function generateSeats(travelClass = "economy") {
+        const seatGrid = $("#seatGrid");
+        seatGrid.empty();
+
+        let rows = 20,
+          seatsPerRow = 6,
+          startRow = 9,
+          columns = ["A", "B", "C", "D", "E", "F"];
+        if (travelClass === "business") {
+          rows = 6;
+          seatsPerRow = 4;
+          startRow = 3;
+          columns = ["A", "B", "C", "D"];
+        }
+        if (travelClass === "first") {
+          rows = 2;
+          seatsPerRow = 4;
+          startRow = 1;
+          columns = ["A", "B", "C", "D"];
+        }
+
+        for (let row = startRow; row < startRow + rows; row++) {
+          for (let col = 0; col < seatsPerRow; col++) {
+            const seatNumber = `${row}${columns[col]}`;
+            const isOccupied = occupiedSeats.includes(seatNumber);
+            const seatEl = $(
+              `<div class="seat ${
+                isOccupied ? "occupied" : "available"
+              }" data-seat="${seatNumber}">${seatNumber}</div>`
+            );
+            if (!isOccupied) seatEl.on("click", () => selectSeat(seatNumber));
+            seatGrid.append(seatEl);
+            if (
+              (travelClass === "economy" && col === 2) ||
+              ((travelClass === "business" || travelClass === "first") &&
+                col === 1)
+            ) {
+              seatGrid.append('<div style="grid-column: span 1;"></div>');
+            }
+          }
+        }
+      }
+
+      function loadOccupiedSeats() {
+        $.ajax({
+          url: `${API_URL}/bookings`,
+          method: "GET",
+          data: { flightId: selectedFlight._id },
+          success: function (response) {
+            occupiedSeats = [];
+            let bookings = response.data || response.bookings || response;
+            if (Array.isArray(bookings)) {
+              bookings.forEach((b) => {
+                if (b.seatNumber && b.status !== "cancelled")
+                  occupiedSeats.push(b.seatNumber);
+              });
+            }
+            generateSeats(currentClass);
+          },
+          error: () => generateSeats(currentClass),
+        });
+      }
+
+      function selectSeat(seatNumber) {
+        $(".seat").removeClass("selected");
+        $(`.seat[data-seat="${seatNumber}"]`).addClass("selected");
+        selectedSeatNumber = seatNumber;
+        $("#selectedSeat").val(seatNumber);
+        $("#summarySeat").text(seatNumber);
+      }
+
+      function submitBooking() {
+        if (!selectedSeatNumber) {
+          alert("Please select a seat");
+          return;
+        }
+
+        const passengerData = {
+          name: $("#passengerName").val().trim(),
+          email: $("#passengerEmail").val().trim(),
+          phone: $("#passengerPhone").val().trim(),
+          passportNumber: $("#passportNumber").val().trim(),
+          dateOfBirth: $("#dateOfBirth").val(),
+          nationality: $("#nationality").val().trim(),
+        };
+
+        const bookingClass = $('input[name="class"]:checked').val();
+        const baggage = [];
+        const baggageWeight = $("#baggageWeight").val();
+        const baggageType = $("#baggageType").val();
+        if (baggageWeight && baggageType)
+          baggage.push({ weight: parseInt(baggageWeight), type: baggageType });
+
+        $("#loadingOverlay").fadeIn();
+        createPassenger(passengerData, bookingClass, baggage);
+      }
+
+      function createPassenger(passengerData, bookingClass, baggage) {
+        $.ajax({
+          url: `${API_URL}/passengers`,
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          data: JSON.stringify(passengerData),
+          success: function (response) {
+            const passenger = response.passenger || response.data || response;
+            createBooking(passenger._id, bookingClass, baggage, passengerData);
+          },
+          error: function (xhr) {
+            if (
+              xhr.status === 400 &&
+              xhr.responseJSON?.error?.includes("already exists")
+            ) {
+              findExistingPassenger(
+                passengerData.passportNumber,
+                bookingClass,
+                baggage,
+                passengerData
+              );
+            } else {
+              $("#loadingOverlay").hide();
+              alert(xhr.responseJSON?.error || "Failed to create passenger");
+            }
+          },
+        });
+      }
+
+      function findExistingPassenger(
+        passport,
+        bookingClass,
+        baggage,
+        passengerData
+      ) {
+        $.ajax({
+          url: `${API_URL}/passengers/passport/${passport}`,
+          method: "GET",
+          success: function (response) {
+            const passenger = response.passenger || response.data || response;
+            createBooking(passenger._id, bookingClass, baggage, passengerData);
+          },
+          error: function () {
+            $("#loadingOverlay").hide();
+            alert("Error finding passenger");
+          },
+        });
+      }
+
+      function createBooking(
+        passengerId,
+        bookingClass,
+        baggage,
+        passengerData
+      ) {
+        const bookingData = {
+          flightId: selectedFlight._id,
+          passengerId: passengerId,
+          seatNumber: selectedSeatNumber,
+          class: bookingClass,
+          baggage: baggage,
+        };
+
+        $.ajax({
+          url: `${API_URL}/bookings`,
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          data: JSON.stringify(bookingData),
+          success: function (response) {
+            $("#loadingOverlay").hide();
+            const booking = response.booking || response.data || response;
+            localStorage.setItem(
+              "lastBooking",
+              JSON.stringify({
+                reference: booking.bookingReference,
+                flightNumber: selectedFlight.flightNumber,
+                origin: selectedFlight.origin,
+                destination: selectedFlight.destination,
+                departureTime: formatDateTime(selectedFlight.departureTime),
+                arrivalTime: formatDateTime(selectedFlight.arrivalTime),
+                gate: selectedFlight.gate,
+                passenger: passengerData.name,
+                passportNumber: passengerData.passportNumber,
+                email: passengerData.email,
+                phone: passengerData.phone,
+                seat: selectedSeatNumber,
+                class: bookingClass,
+              })
+            );
+            window.location.href = "booking-confirmation.html";
+          },
+          error: function (xhr) {
+            $("#loadingOverlay").hide();
+            alert(
+              "Booking Error: " +
+                (xhr.responseJSON?.error || "Failed to create booking")
+            );
+          },
+        });
+      }
+
+      function formatDateTime(dateString) {
+        const date = new Date(dateString);
+        return date.toLocaleString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      }
+    </script>
   </body>
 </html>

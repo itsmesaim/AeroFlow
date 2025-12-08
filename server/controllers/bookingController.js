@@ -35,25 +35,22 @@ exports.getBookings = async (req, res) => {
     // Build query
     let query = {};
 
-    // Filter by status
     if (status) {
       query.status = status;
     }
 
-    // Filter by flight
     if (flightId) {
       query.flightId = flightId;
     }
 
-    // Search by booking reference
     if (search) {
       query.bookingReference = { $regex: search, $options: "i" };
     }
 
-    // Execute query with pagination
+    // Execute query with pagination - POPULATE FULL OBJECTS
     const bookings = await Booking.find(query)
-      .populate("flightId", "flightNumber origin destination departureTime")
-      .populate("passengerId", "name email passportNumber")
+      .populate("flightId")
+      .populate("passengerId")
       .limit(limit * 1)
       .skip((page - 1) * limit)
       .sort({ createdAt: -1 });
@@ -61,13 +58,27 @@ exports.getBookings = async (req, res) => {
     // Get total count
     const count = await Booking.countDocuments(query);
 
+    // Map all bookings for frontend compatibility
+    const bookingsData = bookings.map((b) => {
+      const obj = b.toObject();
+      obj.flight = obj.flightId;
+      obj.passenger = obj.passengerId;
+      obj.checkInStatus =
+        obj.status === "checked-in" || obj.status === "boarded"
+          ? "checked-in"
+          : "pending";
+      obj.boardingStatus = obj.status === "boarded" ? "boarded" : "pending";
+      return obj;
+    });
+
     res.status(200).json({
       success: true,
-      count: bookings.length,
+      count: bookingsData.length,
       total: count,
       page: parseInt(page),
       pages: Math.ceil(count / limit),
-      bookings,
+      bookings: bookingsData,
+      data: bookingsData,
     });
   } catch (error) {
     console.error("Error getting bookings:", error);
@@ -94,9 +105,15 @@ exports.getBooking = async (req, res) => {
       });
     }
 
+    // Map fields for frontend compatibility
+    const bookingData = booking.toObject();
+    bookingData.flight = bookingData.flightId;
+    bookingData.passenger = bookingData.passengerId;
+
     res.status(200).json({
       success: true,
-      booking,
+      booking: bookingData,
+      data: bookingData,
     });
   } catch (error) {
     console.error("Error getting booking:", error);
@@ -109,11 +126,11 @@ exports.getBooking = async (req, res) => {
 
 // @desc    Get booking by reference
 // @route   GET /api/bookings/reference/:reference
-// @access  Private (Admin, Agent, Staff)
+// @access  Public
 exports.getBookingByReference = async (req, res) => {
   try {
     const booking = await Booking.findOne({
-      bookingReference: req.params.reference,
+      bookingReference: req.params.reference.toUpperCase(),
     })
       .populate("flightId")
       .populate("passengerId");
@@ -125,9 +142,15 @@ exports.getBookingByReference = async (req, res) => {
       });
     }
 
+    // Map fields for frontend
+    const bookingData = booking.toObject();
+    bookingData.flight = bookingData.flightId;
+    bookingData.passenger = bookingData.passengerId;
+
     res.status(200).json({
       success: true,
-      booking,
+      booking: bookingData,
+      data: bookingData,
     });
   } catch (error) {
     console.error("Error getting booking:", error);
@@ -138,9 +161,54 @@ exports.getBookingByReference = async (req, res) => {
   }
 };
 
+// @desc    Get bookings by passport number
+// @route   GET /api/bookings/passport/:passport
+// @access  Private (Admin, Agent, Staff)
+exports.getBookingsByPassport = async (req, res) => {
+  try {
+    // Find passenger by passport
+    const passenger = await Passenger.findOne({
+      passportNumber: req.params.passport.toUpperCase(),
+    });
+
+    if (!passenger) {
+      return res.status(404).json({
+        success: false,
+        error: "No passenger found with this passport",
+      });
+    }
+
+    // Find all bookings for this passenger
+    const bookings = await Booking.find({ passengerId: passenger._id })
+      .populate("flightId")
+      .populate("passengerId")
+      .sort({ createdAt: -1 });
+
+    // Map fields
+    const bookingsData = bookings.map((b) => {
+      const obj = b.toObject();
+      obj.flight = obj.flightId;
+      obj.passenger = obj.passengerId;
+      return obj;
+    });
+
+    res.status(200).json({
+      success: true,
+      data: bookingsData,
+      bookings: bookingsData,
+    });
+  } catch (error) {
+    console.error("Error getting bookings by passport:", error);
+    res.status(500).json({
+      success: false,
+      error: "Server error",
+    });
+  }
+};
+
 // @desc    Create new booking
 // @route   POST /api/bookings
-// @access  Private (Admin, Agent, Staff)
+// @access  Public
 exports.createBooking = async (req, res) => {
   try {
     const {
@@ -276,7 +344,7 @@ exports.createBooking = async (req, res) => {
 
 // @desc    Update booking
 // @route   PUT /api/bookings/:id
-// @access  Private (Admin, Agent, Staff)
+// @access  Public
 exports.updateBooking = async (req, res) => {
   try {
     let booking = await Booking.findById(req.params.id);
@@ -310,8 +378,8 @@ exports.updateBooking = async (req, res) => {
       new: true,
       runValidators: true,
     })
-      .populate("flightId", "flightNumber origin destination departureTime")
-      .populate("passengerId", "name email passportNumber");
+      .populate("flightId")
+      .populate("passengerId");
 
     res.status(200).json({
       success: true,
@@ -338,7 +406,7 @@ exports.updateBooking = async (req, res) => {
 
 // @desc    Delete booking (Cancel)
 // @route   DELETE /api/bookings/:id
-// @access  Private (Admin, Agent)
+// @access  Public
 exports.deleteBooking = async (req, res) => {
   try {
     const booking = await Booking.findById(req.params.id);
@@ -405,11 +473,8 @@ exports.checkInBooking = async (req, res) => {
     booking.checkInTime = new Date();
     await booking.save();
 
-    await booking.populate(
-      "flightId",
-      "flightNumber origin destination departureTime gate"
-    );
-    await booking.populate("passengerId", "name email passportNumber");
+    await booking.populate("flightId");
+    await booking.populate("passengerId");
 
     res.status(200).json({
       success: true,
@@ -450,11 +515,8 @@ exports.boardBooking = async (req, res) => {
     booking.boardingTime = new Date();
     await booking.save();
 
-    await booking.populate(
-      "flightId",
-      "flightNumber origin destination departureTime gate"
-    );
-    await booking.populate("passengerId", "name email passportNumber");
+    await booking.populate("flightId");
+    await booking.populate("passengerId");
 
     res.status(200).json({
       success: true,

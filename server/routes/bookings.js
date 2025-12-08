@@ -3,6 +3,7 @@ const {
   getBookings,
   getBooking,
   getBookingByReference,
+  getBookingsByPassport,
   createBooking,
   updateBooking,
   deleteBooking,
@@ -17,6 +18,8 @@ const { protect, authorize } = require("../middleware/auth");
 // Public routes - allow anyone to create booking and search by reference
 router.post("/", createBooking);
 router.get("/reference/:reference", getBookingByReference);
+
+router.get("/passport/:passport", getBookingsByPassport);
 
 // Public routes for passengers to manage their bookings
 router.route("/:id").get(getBooking).put(updateBooking).delete(deleteBooking);

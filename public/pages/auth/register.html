@@ -149,6 +149,7 @@
         cursor: pointer;
         transition: all 0.3s;
         background: white;
+        height: 100%;
       }
 
       .role-card:hover {
@@ -320,8 +321,8 @@
               </div>
 
               <div class="row">
-                <div class="col-md-6 mb-3">
-                  <label class="role-card" id="passengerRole">
+                <div class="col-md-4 mb-3">
+                  <label class="role-card selected" id="passengerRole">
                     <input type="radio" name="role" value="passenger" checked />
                     <div class="role-name">
                       <i class="fas fa-user"></i> Passenger
@@ -331,13 +332,24 @@
                     </div>
                   </label>
                 </div>
-                <div class="col-md-6 mb-3">
+                <div class="col-md-4 mb-3">
                   <label class="role-card" id="staffRole">
                     <input type="radio" name="role" value="staff" />
                     <div class="role-name">
                       <i class="fas fa-user-tie"></i> Staff
                     </div>
-                    <div class="role-desc">Airport staff access</div>
+                    <div class="role-desc">
+                      Check-in and boarding management
+                    </div>
+                  </label>
+                </div>
+                <div class="col-md-4 mb-3">
+                  <label class="role-card" id="adminRole">
+                    <input type="radio" name="role" value="admin" />
+                    <div class="role-name">
+                      <i class="fas fa-user-shield"></i> Admin
+                    </div>
+                    <div class="role-desc">Full system access</div>
                   </label>
                 </div>
               </div>
