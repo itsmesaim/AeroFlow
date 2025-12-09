@@ -535,7 +535,7 @@
         <div class="user-info">
           <span class="user-name" id="userName">Loading...</span>
           <span class="user-role">Staff</span>
-          <button class="btn btn-logout" onclick="logout()">
+          <button class="btn btn-logout" onclick="logoutUser()">
             <i class="fas fa-sign-out-alt"></i> Logout
           </button>
         </div>
@@ -690,21 +690,18 @@
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
           success: function (response) {
+            console.log("Stats response:", response);
             const bookings = response.bookings || response.data || [];
 
-            const scheduledBookings = bookings.filter((booking) => {
-              const flight = booking.flight || booking.flightId;
-              return flight && flight.status === "scheduled";
-            });
-
-            const totalBookings = scheduledBookings.length;
-            const checkedIn = scheduledBookings.filter(
+            // Don't filter by flight status - show ALL bookings
+            const totalBookings = bookings.length;
+            const checkedIn = bookings.filter(
               (b) => b.status === "checked-in"
             ).length;
-            const boarded = scheduledBookings.filter(
+            const boarded = bookings.filter(
               (b) => b.status === "boarded"
             ).length;
-            const pending = scheduledBookings.filter(
+            const pending = bookings.filter(
               (b) => b.status === "confirmed"
             ).length;
 
@@ -715,6 +712,7 @@
           },
           error: function (xhr) {
             console.error("Error loading stats:", xhr);
+            showAlert("danger", "Failed to load statistics");
           },
         });
       }
@@ -746,9 +744,9 @@
               Authorization: `Bearer ${localStorage.getItem("token")}`,
             },
             success: function (response) {
+              console.log("Booking reference response:", response);
               const booking = response.data || response.booking;
-              const flight = booking.flight || booking.flightId;
-              if (flight && flight.status === "scheduled") {
+              if (booking) {
                 foundBookings.push(booking);
               }
               searchesCompleted++;
@@ -757,6 +755,7 @@
               }
             },
             error: function (xhr) {
+              console.error("Error searching by reference:", xhr);
               searchesCompleted++;
               if (searchesCompleted === totalSearches) {
                 displayResults(foundBookings);
@@ -773,18 +772,16 @@
               Authorization: `Bearer ${localStorage.getItem("token")}`,
             },
             success: function (response) {
+              console.log("Passport search response:", response);
               const bookings = response.data || response.bookings || [];
-              const scheduledBookings = bookings.filter((booking) => {
-                const flight = booking.flight || booking.flightId;
-                return flight && flight.status === "scheduled";
-              });
-              foundBookings = [...foundBookings, ...scheduledBookings];
+              foundBookings = [...foundBookings, ...bookings];
               searchesCompleted++;
               if (searchesCompleted === totalSearches) {
                 displayResults(foundBookings);
               }
             },
             error: function (xhr) {
+              console.error("Error searching by passport:", xhr);
               searchesCompleted++;
               if (searchesCompleted === totalSearches) {
                 displayResults(foundBookings);
@@ -796,6 +793,8 @@
 
       function displayResults(bookings) {
         $("#loadingSpinner").removeClass("show");
+
+        console.log("Displaying bookings:", bookings);
 
         const uniqueBookings = bookings.filter(
           (booking, index, self) =>
@@ -829,6 +828,7 @@
               ? "Checked In"
               : "Pending Check-in";
 
+          // Use both flight and flightId for compatibility
           const flight = booking.flight || booking.flightId || {};
           const passenger = booking.passenger || booking.passengerId || {};
 
@@ -925,12 +925,14 @@
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
-          success: function () {
+          success: function (response) {
+            console.log("Check-in response:", response);
             showAlert("success", "Passenger checked in successfully!");
             performSearch();
             loadStats();
           },
           error: function (xhr) {
+            console.error("Check-in error:", xhr);
             showAlert("danger", xhr.responseJSON?.error || "Check-in failed");
           },
         });
@@ -947,17 +949,18 @@
             "Content-Type": "application/json",
           },
           data: JSON.stringify({ bookingId: bookingId }),
-          success: function () {
+          success: function (response) {
+            console.log("Boarding queue response:", response);
             showAlert("success", "Passenger added to boarding queue!");
             performSearch();
           },
           error: function (xhr) {
+            console.error("Boarding queue error:", xhr);
             showAlert(
               "danger",
               "Failed to add to boarding queue: " +
                 (xhr.responseJSON?.error || "Unknown error")
             );
-            console.error("Boarding queue error:", xhr);
           },
         });
       }
@@ -977,7 +980,7 @@
         setTimeout(() => $(".alert").alert("close"), 5000);
       }
 
-      function logout() {
+      function logoutUser() {
         if (confirm("Are you sure you want to logout?")) {
           localStorage.clear();
           window.location.href = "/pages/auth/login.html";

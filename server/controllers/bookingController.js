@@ -30,7 +30,7 @@ const formatDateTime = (date) => {
 // @access  Private (Admin, Agent, Staff)
 exports.getBookings = async (req, res) => {
   try {
-    const { search, status, flightId, page = 1, limit = 10 } = req.query;
+    const { search, status, flightId, page = 1, limit = 100 } = req.query;
 
     // Build query
     let query = {};
@@ -49,8 +49,15 @@ exports.getBookings = async (req, res) => {
 
     // Execute query with pagination - POPULATE FULL OBJECTS
     const bookings = await Booking.find(query)
-      .populate("flightId")
-      .populate("passengerId")
+      .populate({
+        path: "flightId",
+        select:
+          "flightNumber origin destination departureTime arrivalTime gate status capacity price",
+      })
+      .populate({
+        path: "passengerId",
+        select: "name email phone passportNumber dateOfBirth nationality",
+      })
       .limit(limit * 1)
       .skip((page - 1) * limit)
       .sort({ createdAt: -1 });
@@ -61,13 +68,18 @@ exports.getBookings = async (req, res) => {
     // Map all bookings for frontend compatibility
     const bookingsData = bookings.map((b) => {
       const obj = b.toObject();
+
+      // Add both field names for compatibility
       obj.flight = obj.flightId;
       obj.passenger = obj.passengerId;
+
+      // Ensure status fields exist
       obj.checkInStatus =
         obj.status === "checked-in" || obj.status === "boarded"
           ? "checked-in"
           : "pending";
       obj.boardingStatus = obj.status === "boarded" ? "boarded" : "pending";
+
       return obj;
     });
 
@@ -95,8 +107,15 @@ exports.getBookings = async (req, res) => {
 exports.getBooking = async (req, res) => {
   try {
     const booking = await Booking.findById(req.params.id)
-      .populate("flightId")
-      .populate("passengerId");
+      .populate({
+        path: "flightId",
+        select:
+          "flightNumber origin destination departureTime arrivalTime gate status capacity price",
+      })
+      .populate({
+        path: "passengerId",
+        select: "name email phone passportNumber dateOfBirth nationality",
+      });
 
     if (!booking) {
       return res.status(404).json({
@@ -109,6 +128,12 @@ exports.getBooking = async (req, res) => {
     const bookingData = booking.toObject();
     bookingData.flight = bookingData.flightId;
     bookingData.passenger = bookingData.passengerId;
+    bookingData.checkInStatus =
+      bookingData.status === "checked-in" || bookingData.status === "boarded"
+        ? "checked-in"
+        : "pending";
+    bookingData.boardingStatus =
+      bookingData.status === "boarded" ? "boarded" : "pending";
 
     res.status(200).json({
       success: true,
@@ -132,8 +157,15 @@ exports.getBookingByReference = async (req, res) => {
     const booking = await Booking.findOne({
       bookingReference: req.params.reference.toUpperCase(),
     })
-      .populate("flightId")
-      .populate("passengerId");
+      .populate({
+        path: "flightId",
+        select:
+          "flightNumber origin destination departureTime arrivalTime gate status capacity price",
+      })
+      .populate({
+        path: "passengerId",
+        select: "name email phone passportNumber dateOfBirth nationality",
+      });
 
     if (!booking) {
       return res.status(404).json({
@@ -146,6 +178,12 @@ exports.getBookingByReference = async (req, res) => {
     const bookingData = booking.toObject();
     bookingData.flight = bookingData.flightId;
     bookingData.passenger = bookingData.passengerId;
+    bookingData.checkInStatus =
+      bookingData.status === "checked-in" || bookingData.status === "boarded"
+        ? "checked-in"
+        : "pending";
+    bookingData.boardingStatus =
+      bookingData.status === "boarded" ? "boarded" : "pending";
 
     res.status(200).json({
       success: true,
@@ -180,8 +218,15 @@ exports.getBookingsByPassport = async (req, res) => {
 
     // Find all bookings for this passenger
     const bookings = await Booking.find({ passengerId: passenger._id })
-      .populate("flightId")
-      .populate("passengerId")
+      .populate({
+        path: "flightId",
+        select:
+          "flightNumber origin destination departureTime arrivalTime gate status capacity price",
+      })
+      .populate({
+        path: "passengerId",
+        select: "name email phone passportNumber dateOfBirth nationality",
+      })
       .sort({ createdAt: -1 });
 
     // Map fields
@@ -189,6 +234,11 @@ exports.getBookingsByPassport = async (req, res) => {
       const obj = b.toObject();
       obj.flight = obj.flightId;
       obj.passenger = obj.passengerId;
+      obj.checkInStatus =
+        obj.status === "checked-in" || obj.status === "boarded"
+          ? "checked-in"
+          : "pending";
+      obj.boardingStatus = obj.status === "boarded" ? "boarded" : "pending";
       return obj;
     });
 
@@ -293,36 +343,48 @@ exports.createBooking = async (req, res) => {
     });
 
     // Populate before sending response
-    await booking.populate(
-      "flightId",
-      "flightNumber origin destination departureTime arrivalTime gate"
-    );
-    await booking.populate("passengerId", "name email passportNumber");
+    await booking.populate({
+      path: "flightId",
+      select:
+        "flightNumber origin destination departureTime arrivalTime gate status",
+    });
+    await booking.populate({
+      path: "passengerId",
+      select: "name email passportNumber",
+    });
+
+    // Add compatibility fields
+    const bookingData = booking.toObject();
+    bookingData.flight = bookingData.flightId;
+    bookingData.passenger = bookingData.passengerId;
 
     // Send confirmation email asynchronously
-    const emailData = {
-      email: booking.passengerId.email,
-      passengerName: booking.passengerId.name,
-      bookingReference: booking.bookingReference,
-      flightNumber: booking.flightId.flightNumber,
-      origin: booking.flightId.origin,
-      destination: booking.flightId.destination,
-      departureTime: formatDateTime(booking.flightId.departureTime),
-      arrivalTime: formatDateTime(booking.flightId.arrivalTime),
-      gate: booking.flightId.gate || "TBA",
-      seatNumber: booking.seatNumber,
-      class: booking.class.charAt(0).toUpperCase() + booking.class.slice(1),
-      passportNumber: booking.passengerId.passportNumber,
-    };
+    if (emailService && emailService.sendBookingConfirmation) {
+      const emailData = {
+        email: booking.passengerId.email,
+        passengerName: booking.passengerId.name,
+        bookingReference: booking.bookingReference,
+        flightNumber: booking.flightId.flightNumber,
+        origin: booking.flightId.origin,
+        destination: booking.flightId.destination,
+        departureTime: formatDateTime(booking.flightId.departureTime),
+        arrivalTime: formatDateTime(booking.flightId.arrivalTime),
+        gate: booking.flightId.gate || "TBA",
+        seatNumber: booking.seatNumber,
+        class: booking.class.charAt(0).toUpperCase() + booking.class.slice(1),
+        passportNumber: booking.passengerId.passportNumber,
+      };
 
-    emailService.sendBookingConfirmation(emailData).catch((err) => {
-      console.error("Failed to send booking confirmation email:", err);
-    });
+      emailService.sendBookingConfirmation(emailData).catch((err) => {
+        console.error("Failed to send booking confirmation email:", err);
+      });
+    }
 
     res.status(201).json({
       success: true,
       message: "Booking created successfully",
-      booking,
+      booking: bookingData,
+      data: bookingData,
     });
   } catch (error) {
     console.error("Error creating booking:", error);
@@ -378,13 +440,25 @@ exports.updateBooking = async (req, res) => {
       new: true,
       runValidators: true,
     })
-      .populate("flightId")
-      .populate("passengerId");
+      .populate({
+        path: "flightId",
+        select:
+          "flightNumber origin destination departureTime arrivalTime gate status",
+      })
+      .populate({
+        path: "passengerId",
+        select: "name email passportNumber",
+      });
+
+    const bookingData = booking.toObject();
+    bookingData.flight = bookingData.flightId;
+    bookingData.passenger = bookingData.passengerId;
 
     res.status(200).json({
       success: true,
       message: "Booking updated successfully",
-      booking,
+      booking: bookingData,
+      data: bookingData,
     });
   } catch (error) {
     console.error("Error updating booking:", error);
@@ -473,13 +547,25 @@ exports.checkInBooking = async (req, res) => {
     booking.checkInTime = new Date();
     await booking.save();
 
-    await booking.populate("flightId");
-    await booking.populate("passengerId");
+    await booking.populate({
+      path: "flightId",
+      select:
+        "flightNumber origin destination departureTime arrivalTime gate status",
+    });
+    await booking.populate({
+      path: "passengerId",
+      select: "name email passportNumber",
+    });
+
+    const bookingData = booking.toObject();
+    bookingData.flight = bookingData.flightId;
+    bookingData.passenger = bookingData.passengerId;
 
     res.status(200).json({
       success: true,
       message: "Check-in successful",
-      booking,
+      booking: bookingData,
+      data: bookingData,
     });
   } catch (error) {
     console.error("Error checking in booking:", error);
@@ -515,13 +601,25 @@ exports.boardBooking = async (req, res) => {
     booking.boardingTime = new Date();
     await booking.save();
 
-    await booking.populate("flightId");
-    await booking.populate("passengerId");
+    await booking.populate({
+      path: "flightId",
+      select:
+        "flightNumber origin destination departureTime arrivalTime gate status",
+    });
+    await booking.populate({
+      path: "passengerId",
+      select: "name email passportNumber",
+    });
+
+    const bookingData = booking.toObject();
+    bookingData.flight = bookingData.flightId;
+    bookingData.passenger = bookingData.passengerId;
 
     res.status(200).json({
       success: true,
       message: "Boarding successful",
-      booking,
+      booking: bookingData,
+      data: bookingData,
     });
   } catch (error) {
     console.error("Error boarding booking:", error);
