@@ -79,10 +79,10 @@ const newFlights = [
   {
     flightNumber: "LH700",
     airline: "Lufthansa",
-    aircraft: "A350",
+    aircraft: "A330",
     origin: "FRA",
     destination: "JFK",
-    departureTime: new Date(Date.now() + 8 * 60 * 60 * 1000), // 8 hours from now
+    departureTime: new Date(Date.now() + 8 * 60 * 60 * 1000),
     arrivalTime: new Date(Date.now() + 17 * 60 * 60 * 1000),
     gate: "F12",
     status: "scheduled",
